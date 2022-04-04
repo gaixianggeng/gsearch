@@ -4,12 +4,20 @@ import "fmt"
 
 // AddDocument 添加文档
 func (e *Engine) AddDocument(title, body []byte) error {
-	docID, err := e.db.AddDoc(title, body)
-	if err != nil {
-		return fmt.Errorf("AddDocument err: %v", err)
+	if len(title) > 0 || len(body) > 0 {
+		docID, err := e.db.Add(title, body)
+		if err != nil {
+			return fmt.Errorf("AddDocument err: %v", err)
+		}
+		fmt.Println(docID)
+		err = e.text2PostingsLists(docID, title)
+		if err != nil {
+			return fmt.Errorf("text2postingslists err: %v", err)
+		}
+		e.indexCount++
 	}
-	fmt.Println(docID)
-	e.text2PostingsLists(docID, title)
+
+	// 落盘操作
 
 	return nil
 

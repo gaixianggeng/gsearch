@@ -7,10 +7,16 @@ import (
 // DB 存储器
 type DB struct{}
 
-// AddDoc 通过写入正排数据，获取docid
-func (d *DB) AddDoc(title, body []byte) (int64, error) {
+// Add 通过写入正排数据，获取docid
+func (d *DB) Add(title, body []byte) (int64, error) {
 
 	return 0, nil
+}
+
+// GetTokenID 获取tokenid和出现次数
+func (d *DB) GetTokenID(token []byte, docID int64) (int64, int64) {
+
+	return 0, 0
 }
 
 // /**

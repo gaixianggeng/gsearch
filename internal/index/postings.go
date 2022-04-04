@@ -1,14 +1,15 @@
 package index
 
 import (
+	"brain/internal/query"
 	"brain/internal/storage"
 	"bytes"
 	"fmt"
 )
 
-// MergePostings merge two postings list
+// mergePostings merge two postings list
 // https://leetcode-cn.com/problems/he-bing-liang-ge-pai-xu-de-lian-biao-lcof/
-func MergePostings(pa, pb *PostingsList) *PostingsList {
+func mergePostings(pa, pb *PostingsList) *PostingsList {
 	ret := new(PostingsList)
 	p := new(PostingsList)
 	p = nil
@@ -38,19 +39,17 @@ func MergePostings(pa, pb *PostingsList) *PostingsList {
 	return ret.next
 }
 
-// MergeInvertedIndex 合并两个倒排索引
-func MergeInvertedIndex(base, toBeAdded *InvertedIndexHash) {
-	for tokenID, index := range *base {
-		if toBeAddedIndex, ok := (*toBeAdded)[tokenID]; ok {
-			index.postingList = MergePostings(index.postingList, toBeAddedIndex.postingList)
+// mergeInvertedIndex 合并两个倒排索引
+func mergeInvertedIndex(base, toBeAdded InvertedIndexHash) {
+	for tokenID, index := range base {
+		if toBeAddedIndex, ok := (toBeAdded)[tokenID]; ok {
+			index.postingList = mergePostings(index.postingList, toBeAddedIndex.postingList)
 			index.docsCount += toBeAddedIndex.docsCount
-			//TODO: 不确定要不要加 先todo
-			// index.positionCount += toBeAddedIndex.positionCount
-			delete(*toBeAdded, tokenID)
+			delete(toBeAdded, tokenID)
 		}
 	}
-	for tokenID, index := range *toBeAdded {
-		(*base)[tokenID] = index
+	for tokenID, index := range toBeAdded {
+		(base)[tokenID] = index
 	}
 
 }
@@ -103,7 +102,7 @@ func updatePostings(p *InvertedIndexValue) error {
 	}
 	// merge
 	if size > 0 {
-		p.postingList = MergePostings(oldPostings, p.postingList)
+		p.postingList = mergePostings(oldPostings, p.postingList)
 		p.docsCount += size
 	}
 	// 开始写入数据库
@@ -145,8 +144,47 @@ func updatePostings(p *InvertedIndexValue) error {
 
 // text2PostingsLists --
 func (e *Engine) text2PostingsLists(docID int64, text []byte) error {
+	tokens, err := query.Ngram(string(text), e.N)
+	if err != nil {
+		return fmt.Errorf("text2PostingsLists Ngram err: %v", err)
+	}
+	bufferInvertedHash := make(InvertedIndexHash)
+
+	for _, token := range tokens {
+		e.token2PostingsLists(bufferInvertedHash, token.Token, token.Position, docID)
+	}
+
+	if len(e.postingsHash) > 0 {
+		mergeInvertedIndex(e.postingsHash, bufferInvertedHash)
+	} else {
+		e.postingsHash = bufferInvertedHash
+	}
 	return nil
 
 }
 
-func (e *Engine) token2PostingsLists(docID int64, token []byte,position int64,) error {
+func (e *Engine) token2PostingsLists(bufInvertHash InvertedIndexHash, token []byte, position int64, docID int64) error {
+
+	bufInvert := new(InvertedIndexValue)
+
+	// 查询的是整个索引库 不是临时库
+	tokenID, tokenCount := e.db.GetTokenID(token, docID)
+
+	if len(bufInvertHash) > 0 {
+		if item, ok := bufInvertHash[tokenID]; ok {
+			bufInvert = item
+		}
+	}
+
+	pl := new(PostingsList)
+	if bufInvert != nil {
+		pl = bufInvert.postingList
+		pl.positionCount++
+	} else {
+
+	}
+
+	bufInvert.positionCount++
+
+	return nil
+}

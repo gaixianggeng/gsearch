@@ -11,6 +11,8 @@ type Engine struct {
 	buf          bytes.Buffer
 	bufSize      int64
 	postingsHash InvertedIndexHash
+	indexCount   int64
+	N            int32 // ngram
 }
 
 // PostingsList 倒排列表
