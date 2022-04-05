@@ -14,9 +14,9 @@ func (d *DB) Add(title, body []byte) (int64, error) {
 }
 
 // GetTokenID 获取tokenid和出现次数
-func (d *DB) GetTokenID(token []byte, docID int64) (int64, int64) {
+func (d *DB) GetTokenID(token []byte, docID int64) (int64, int64, error) {
 
-	return 0, 0
+	return 0, 0, nil
 }
 
 // /**

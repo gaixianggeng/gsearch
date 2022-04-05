@@ -92,8 +92,7 @@ func fetchPostings(tokenID int64) (*PostingsList, int64, error) {
 
 func updatePostings(p *InvertedIndexValue) error {
 	if p == nil {
-		fmt.Println("updatePostings p is nil")
-		return nil
+		return fmt.Errorf("updatePostings p is nil")
 	}
 	// 拉取数据库数据
 	oldPostings, size, err := fetchPostings(p.TokenID)
@@ -108,9 +107,7 @@ func updatePostings(p *InvertedIndexValue) error {
 	// 开始写入数据库
 	buf := encodePostings(p.postingList, p.docsCount)
 
-	storage.DBUpdatePostings(p.TokenID, p.docsCount, buf, int64(buf.Len()))
-
-	return nil
+	return storage.DBUpdatePostings(p.TokenID, p.docsCount, buf, int64(buf.Len()))
 }
 
 // /**
@@ -148,27 +145,37 @@ func (e *Engine) text2PostingsLists(docID int64, text []byte) error {
 	if err != nil {
 		return fmt.Errorf("text2PostingsLists Ngram err: %v", err)
 	}
-	bufferInvertedHash := make(InvertedIndexHash)
+	bufInvertedHash := make(InvertedIndexHash)
 
 	for _, token := range tokens {
-		e.token2PostingsLists(bufferInvertedHash, token.Token, token.Position, docID)
+		err := e.token2PostingsLists(bufInvertedHash, token.Token, token.Position, docID)
+		if err != nil {
+			return fmt.Errorf("text2PostingsLists token2PostingsLists err: %v", err)
+		}
 	}
 
-	if len(e.postingsHash) > 0 {
-		mergeInvertedIndex(e.postingsHash, bufferInvertedHash)
+	if e.postingsHashBuf != nil && len(e.postingsHashBuf) > 0 {
+		mergeInvertedIndex(e.postingsHashBuf, bufInvertedHash)
 	} else {
-		e.postingsHash = bufferInvertedHash
+		e.postingsHashBuf = make(InvertedIndexHash)
+		e.postingsHashBuf = bufInvertedHash
 	}
 	return nil
 
 }
 
-func (e *Engine) token2PostingsLists(bufInvertHash InvertedIndexHash, token []byte, position int64, docID int64) error {
+func (e *Engine) token2PostingsLists(
+	bufInvertHash InvertedIndexHash, token []byte,
+	position int64, docID int64) error {
 
 	bufInvert := new(InvertedIndexValue)
 
 	// 查询的是整个索引库 不是临时库
-	tokenID, tokenCount := e.db.GetTokenID(token, docID)
+	// doc_id用来标识写入数据还是查询数据
+	tokenID, docCount, err := e.db.GetTokenID(token, docID)
+	if err != nil {
+		return fmt.Errorf("token2PostingsLists GetTokenID err: %v", err)
+	}
 
 	if len(bufInvertHash) > 0 {
 		if item, ok := bufInvertHash[tokenID]; ok {
@@ -179,11 +186,19 @@ func (e *Engine) token2PostingsLists(bufInvertHash InvertedIndexHash, token []by
 	pl := new(PostingsList)
 	if bufInvert != nil {
 		pl = bufInvert.postingList
+		// 这里的positioinCount和下面bufInvert的po
 		pl.positionCount++
 	} else {
-
+		if docID != 0 {
+			docCount = 1
+		}
+		bufInvert = createNewInvertedIndex(tokenID, docCount)
+		bufInvertHash[tokenID] = bufInvert
+		pl = createNewPostingList(docID)
+		bufInvert.postingList = pl
 	}
-
+	// 存储位置信息
+	pl.positions = append(pl.positions, position)
 	bufInvert.positionCount++
 
 	return nil
