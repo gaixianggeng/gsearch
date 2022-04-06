@@ -2,17 +2,17 @@ package index
 
 import (
 	"brain/internal/storage"
-	"bytes"
 )
 
 // Engine 写入引擎
 type Engine struct {
-	db           *storage.DB
-	buf          bytes.Buffer
-	bufSize      int64
-	postingsHash InvertedIndexHash
-	indexCount   int64
-	N            int32 // ngram
+	db *storage.DB
+
+	postingsHashBuf InvertedIndexHash // 倒排索引缓冲区
+	bufCount        int64             //倒排索引缓冲区的文档数
+	bufSize         int64
+	indexCount      int64
+	N               int32 // ngram
 }
 
 // PostingsList 倒排列表
