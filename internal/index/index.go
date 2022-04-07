@@ -40,16 +40,16 @@ func (e *Engine) AddDocument(title, body []byte) error {
 }
 
 // 创建倒排列表
-func createNewPostingList(docID int64) *PostingsList {
+func createNewPostingList(docID uint64) *PostingsList {
 	p := new(PostingsList)
 	p.DocID = docID
 	p.positionCount = 1
-	p.positions = make([]int64, 0)
+	p.positions = make([]uint64, 0)
 	return p
 }
 
 // 创建倒排索引
-func createNewInvertedIndex(tokenID, docCount int64) *InvertedIndexValue {
+func createNewInvertedIndex(tokenID, docCount uint64) *InvertedIndexValue {
 	p := new(InvertedIndexValue)
 	p.docsCount = docCount
 	p.TokenID = tokenID

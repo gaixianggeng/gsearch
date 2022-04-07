@@ -215,7 +215,7 @@ func (t *Tree) seekNode(node *Node, off OFFTYPE) error {
 	if n, err := t.file.ReadAt(buf, int64(off)+8); err != nil {
 		return err
 	} else if uint64(n) != uint64(dataLen) {
-		return fmt.Errorf("readat %d from %s, expected len = %d but get %d", int64(off)+4, t.file.Name(), dataLen, n)
+		return fmt.Errorf("readat %d from %s, expected len = %d but get %d", uint64(off)+4, t.file.Name(), dataLen, n)
 	}
 
 	bs = bytes.NewBuffer(buf)
@@ -412,7 +412,7 @@ func (t *Tree) flushNode(n *Node) error {
 	if length, err = t.file.WriteAt(data, int64(n.Self)); err != nil {
 		return err
 	} else if len(data) != length {
-		return fmt.Errorf("writeat %d into %s, expected len = %d but get %d", int64(n.Self), t.file.Name(), len(data), length)
+		return fmt.Errorf("writeat %d into %s, expected len = %d but get %d", uint64(n.Self), t.file.Name(), len(data), length)
 	}
 	return nil
 }

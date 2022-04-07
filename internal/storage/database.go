@@ -1,21 +1,24 @@
 package storage
 
 import (
+	"brain/internal/storage/bptree"
 	"bytes"
 )
 
 // DB 存储器
-type DB struct{}
+type DB struct {
+	bp *bptree.Tree
+}
 
 // Add 通过写入正排数据，获取docid
-func (d *DB) Add(title, body []byte) (int64, error) {
+func (d *DB) Add(title, body []byte) (uint64, error) {
 
 	return 0, nil
 }
 
 // GetTokenID 获取tokenid和出现次数
-func (d *DB) GetTokenID(token []byte, docID int64) (int64, int64, error) {
-
+func (d *DB) GetTokenID(token []byte, docID uint64) (uint64, uint64, error) {
+	d.bp.Find(uint64(docID))
 	return 0, 0, nil
 }
 
@@ -50,7 +53,7 @@ func (d *DB) GetTokenID(token []byte, docID int64) (int64, int64, error) {
 // }
 
 // DBUpdatePostings 倒排列表存储到数据库中
-func DBUpdatePostings(tokenID int64, docsCount int64, buf *bytes.Buffer, size int64) error {
+func DBUpdatePostings(tokenID uint64, docsCount uint64, buf *bytes.Buffer, size uint64) error {
 	return nil
 
 }

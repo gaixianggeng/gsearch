@@ -61,7 +61,7 @@ func decodePostings() {
 
 // 编码
 // bytes.Buffer
-func encodePostings(postings *PostingsList, docCount int64) *bytes.Buffer {
+func encodePostings(postings *PostingsList, docCount uint64) *bytes.Buffer {
 	buf := bytes.NewBuffer([]byte{})
 
 	return buf
@@ -85,7 +85,7 @@ func encodePostings(postings *PostingsList, docCount int64) *bytes.Buffer {
 
 }
 
-func fetchPostings(tokenID int64) (*PostingsList, int64, error) {
+func fetchPostings(tokenID uint64) (*PostingsList, uint64, error) {
 
 	return nil, 0, nil
 }
@@ -107,7 +107,7 @@ func updatePostings(p *InvertedIndexValue) error {
 	// 开始写入数据库
 	buf := encodePostings(p.postingList, p.docsCount)
 
-	return storage.DBUpdatePostings(p.TokenID, p.docsCount, buf, int64(buf.Len()))
+	return storage.DBUpdatePostings(p.TokenID, p.docsCount, buf, uint64(buf.Len()))
 }
 
 // /**
@@ -140,7 +140,7 @@ func updatePostings(p *InvertedIndexValue) error {
 // const int n, inverted_index_hash** postings) {
 
 // text2PostingsLists --
-func (e *Engine) text2PostingsLists(docID int64, text []byte) error {
+func (e *Engine) text2PostingsLists(docID uint64, text []byte) error {
 	tokens, err := query.Ngram(string(text), e.N)
 	if err != nil {
 		return fmt.Errorf("text2PostingsLists Ngram err: %v", err)
@@ -166,7 +166,7 @@ func (e *Engine) text2PostingsLists(docID int64, text []byte) error {
 
 func (e *Engine) token2PostingsLists(
 	bufInvertHash InvertedIndexHash, token []byte,
-	position int64, docID int64) error {
+	position uint64, docID uint64) error {
 
 	bufInvert := new(InvertedIndexValue)
 

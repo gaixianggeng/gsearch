@@ -3,7 +3,7 @@ package query
 // Tokenization  分词返回结构
 type Tokenization struct {
 	Token    []byte
-	Position int64
+	Position uint64
 }
 
 // Ngram 分词
