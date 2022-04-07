@@ -803,6 +803,7 @@ func (t *Tree) Insert(key uint64, val string) error {
 		node *Node
 	)
 
+	// 如果是根节点 直接插入
 	if t.rootOff == INVALID_OFFSET {
 		if node, err = t.newNodeFromDisk(); err != nil {
 			return err

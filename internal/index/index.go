@@ -7,7 +7,7 @@ import (
 // AddDocument 添加文档
 func (e *Engine) AddDocument(title, body []byte) error {
 	if len(title) > 0 || len(body) > 0 {
-		docID, err := e.db.Add(title, body)
+		docID, err := e.forwardDB.Add(title, body)
 		if err != nil {
 			return fmt.Errorf("AddDocument err: %v", err)
 		}
@@ -27,7 +27,7 @@ func (e *Engine) AddDocument(title, body []byte) error {
 		for tokenID, invertedIndex := range e.postingsHashBuf {
 
 			fmt.Printf("tokenID:%d,invertedIndex:%v\n", tokenID, invertedIndex)
-			updatePostings(invertedIndex)
+			e.updatePostings(invertedIndex)
 		}
 
 		// 重置

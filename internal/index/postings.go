@@ -90,7 +90,7 @@ func fetchPostings(tokenID uint64) (*PostingsList, uint64, error) {
 	return nil, 0, nil
 }
 
-func updatePostings(p *InvertedIndexValue) error {
+func (e *Engine) updatePostings(p *InvertedIndexValue) error {
 	if p == nil {
 		return fmt.Errorf("updatePostings p is nil")
 	}
@@ -107,7 +107,7 @@ func updatePostings(p *InvertedIndexValue) error {
 	// 开始写入数据库
 	buf := encodePostings(p.postingList, p.docsCount)
 
-	return storage.DBUpdatePostings(p.TokenID, p.docsCount, buf, uint64(buf.Len()))
+	return storage.DBUpdatePostings(e.invertedDB, p.TokenID, p.docsCount, buf, uint64(buf.Len()))
 }
 
 // /**
@@ -172,7 +172,7 @@ func (e *Engine) token2PostingsLists(
 
 	// 查询的是整个索引库 不是临时库
 	// doc_id用来标识写入数据还是查询数据
-	tokenID, docCount, err := e.db.GetTokenID(token, docID)
+	tokenID, docCount, err := e.forwardDB.GetTokenID(token, docID)
 	if err != nil {
 		return fmt.Errorf("token2PostingsLists GetTokenID err: %v", err)
 	}
