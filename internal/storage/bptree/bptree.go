@@ -1131,40 +1131,48 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		return err
 	}
 
+	// 获取key所在节点的index位置
 	idx = getIndex(leaf.Keys, key)
 	if idx == len(leaf.Keys) || leaf.Keys[idx] != key {
 		t.putNodePool(leaf)
 		return fmt.Errorf("not found key:%d", key)
-
 	}
+
 	removeKeyFromLeaf(leaf, idx)
 
-	// if leaf is root
+	// if leaf is root 直接落盘更新
 	if leaf.Self == t.rootOff {
 		return t.flushNodesAndPutNodesPool(leaf)
 	}
 
 	// update the last key of parent's if necessary
+	// 此时len已经减1，表示位置是最后一个
 	if idx == len(leaf.Keys) {
+		// 更新父节点的值
 		if err = t.mayUpdatedLastParentKey(leaf, idx-1); err != nil {
 			return err
 		}
 	}
 
 	// if satisfied len
+	// 当前叶子节点的长度大于order/2，满足b+树结构，不需要调整其他结构，可以直接落盘更新
 	if len(leaf.Keys) >= order/2 {
 		return t.flushNodesAndPutNodesPool(leaf)
 	}
 
+	// 叶子节点有后继节点
 	if leaf.Next != InvalidOffset {
 		if nextLeaf, err = t.newMappingNodeFromPool(leaf.Next); err != nil {
 			return err
 		}
 		// lease from next leaf
+		// 借一个节点过来
 		if len(nextLeaf.Keys) > order/2 {
 			key := nextLeaf.Keys[0]
 			rec := nextLeaf.Values[0]
+			// 删除nextLeaf的第一个key
 			removeKeyFromLeaf(nextLeaf, 0)
+			// 将key插入到leaf中
 			if idx, err = insertKeyValIntoLeaf(leaf, key, rec); err != nil {
 				return err
 			}
@@ -1172,10 +1180,12 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 			if err = t.mayUpdatedLastParentKey(leaf, idx); err != nil {
 				return err
 			}
+			// 落盘更新
 			return t.flushNodesAndPutNodesPool(nextLeaf, leaf)
 		}
 
 		// merge nextLeaf and curleaf
+		// 合并后继叶子节点
 		if leaf.Prev != InvalidOffset {
 			if prevLeaf, err = t.newMappingNodeFromPool(leaf.Prev); err != nil {
 				return err
@@ -1191,23 +1201,25 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 
 		nextLeaf.Keys = append(leaf.Keys, nextLeaf.Keys...)
 		nextLeaf.Values = append(leaf.Values, nextLeaf.Values...)
-
+		// 释放block
 		leaf.IsActive = false
 		t.putFreeBlocks(leaf.Self)
-
+		// 更新
 		if err = t.flushNodesAndPutNodesPool(leaf, nextLeaf); err != nil {
 			return err
 		}
-
+		// 删除父节点中已合并的key （此时key已经是更新后的key，不是待删除的旧key）
 		return t.deleteKeyFromNode(leaf.Parent, leaf.Keys[len(leaf.Keys)-1])
 	}
 
 	// come here because leaf.Next = INVALID_OFFSET
+	// 叶子节点没有后继节点 && 前置节点不为空
 	if leaf.Prev != InvalidOffset {
 		if prevLeaf, err = t.newMappingNodeFromPool(leaf.Prev); err != nil {
 			return err
 		}
 		// lease from prev leaf
+		// 从前面借一个
 		if len(prevLeaf.Keys) > order/2 {
 			key := prevLeaf.Keys[len(prevLeaf.Keys)-1]
 			rec := prevLeaf.Values[len(prevLeaf.Values)-1]
@@ -1222,17 +1234,19 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 			return t.flushNodesAndPutNodesPool(prevLeaf, leaf)
 		}
 		// merge prevleaf and curleaf
+		// 否则合并前面的叶子节点
 		prevLeaf.Next = InvalidOffset
 		prevLeaf.Keys = append(prevLeaf.Keys, leaf.Keys...)
 		prevLeaf.Values = append(prevLeaf.Values, leaf.Values...)
-
+		// 释放block
 		leaf.IsActive = false
 		t.putFreeBlocks(leaf.Self)
-
+		// 更新
 		if err = t.flushNodesAndPutNodesPool(leaf, prevLeaf); err != nil {
 			return err
 		}
-
+		// 删除父节点中已合并的key
+		// TODO: ?不会panic？？？
 		return t.deleteKeyFromNode(leaf.Parent, leaf.Keys[len(leaf.Keys)-2])
 	}
 

@@ -88,3 +88,10 @@ func TestBptree(t *testing.T) {
 	// second print
 	tree.ScanTreePrint()
 }
+
+func TestS(t *testing.T) {
+	a := make([]int, 0)
+	a = append(a, 1)
+	a = append(a, 2)
+	fmt.Println(a[len(a)-2])
+}
