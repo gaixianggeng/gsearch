@@ -1121,10 +1121,12 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		err      error
 		idx      int
 	)
+	// 获取node
 	if leaf, err = t.newMappingNodeFromPool(InvalidOffset); err != nil {
 		return err
 	}
 
+	// 找到key对应的叶子节点
 	if err = t.findLeaf(leaf, key); err != nil {
 		return err
 	}
@@ -1237,6 +1239,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 	return nil
 }
 
+// Delete delete the key from tree
 func (t *Tree) Delete(key uint64) error {
 	if t.rootOff == InvalidOffset {
 		return fmt.Errorf("not found key:%d", key)
@@ -1244,6 +1247,7 @@ func (t *Tree) Delete(key uint64) error {
 	return t.deleteKeyFromLeaf(key)
 }
 
+// ScanTreePrint 遍历打印
 func (t *Tree) ScanTreePrint() error {
 	if t.rootOff == InvalidOffset {
 		return fmt.Errorf("root = nil")
