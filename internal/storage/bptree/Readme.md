@@ -2,6 +2,9 @@
 Implementing bplustree base on disk(kv store).The type of key is `uint64` and value is `string`.    
 And all actions are not `Concurrent security`.
 
+#### b+树定义结构
+![https://zhuanlan.zhihu.com/p/85666422](./b.png)
+
 #### InitTree
 ```go 
 if tree, err = NewTree("./data.db"); err != nil {

@@ -46,6 +46,7 @@ type Tree struct {
 }
 
 // Node 节点信息
+// key和childern是等价的 key存储的是值，childern存储的是子节点的offset
 type Node struct {
 	IsActive bool // 节点所在的磁盘空间是否在当前b+树内
 	Children []OFFTYPE
@@ -54,7 +55,7 @@ type Node struct {
 	Prev     OFFTYPE
 	Parent   OFFTYPE
 	Keys     []uint64
-	Records  []string
+	Values   []string
 	IsLeaf   bool // 是否为叶子节点
 }
 
@@ -179,7 +180,7 @@ func (t *Tree) initNodeForUsage(node *Node) {
 	node.Prev = InvalidOffset
 	node.Parent = InvalidOffset
 	node.Keys = nil
-	node.Records = nil
+	node.Values = nil
 	node.IsLeaf = false
 }
 
@@ -191,7 +192,7 @@ func (t *Tree) clearNodeForUsage(node *Node) {
 	node.Prev = InvalidOffset
 	node.Parent = InvalidOffset
 	node.Keys = nil
-	node.Records = nil
+	node.Values = nil
 	node.IsLeaf = false
 }
 
@@ -288,7 +289,7 @@ func (t *Tree) seekNode(node *Node, off OFFTYPE) error {
 	if err = binary.Read(bs, binary.LittleEndian, &recordCount); err != nil {
 		return err
 	}
-	node.Records = make([]string, recordCount)
+	node.Values = make([]string, recordCount)
 	for i := uint8(0); i < recordCount; i++ {
 		l := uint8(0)
 		if err = binary.Read(bs, binary.LittleEndian, &l); err != nil {
@@ -298,7 +299,7 @@ func (t *Tree) seekNode(node *Node, off OFFTYPE) error {
 		if err = binary.Read(bs, binary.LittleEndian, &v); err != nil {
 			return err
 		}
-		node.Records[i] = string(v)
+		node.Values[i] = string(v)
 	}
 	// IsLeaf
 	if err = binary.Read(bs, binary.LittleEndian, &node.IsLeaf); err != nil {
@@ -325,6 +326,7 @@ func (t *Tree) flushNodeAndPutNodePool(n *Node) error {
 	return nil
 }
 
+// 归还至pool
 func (t *Tree) putNodePool(n *Node) {
 	t.nodePool.Put(n)
 }
@@ -393,11 +395,11 @@ func (t *Tree) flushNode(n *Node) error {
 	}
 
 	// Record
-	recordCount := uint8(len(n.Records))
+	recordCount := uint8(len(n.Values))
 	if err = binary.Write(bs, binary.LittleEndian, recordCount); err != nil {
 		return err
 	}
-	for _, v := range n.Records {
+	for _, v := range n.Values {
 		if err = binary.Write(bs, binary.LittleEndian, uint8(len([]byte(v)))); err != nil {
 			return err
 		}
@@ -429,6 +431,7 @@ func (t *Tree) flushNode(n *Node) error {
 	return nil
 }
 
+// 根据offset组装node
 func (t *Tree) newMappingNodeFromPool(off OFFTYPE) (*Node, error) {
 	node := t.nodePool.Get().(*Node)
 	t.initNodeForUsage(node)
@@ -470,6 +473,7 @@ func (t *Tree) newNodeFromDisk() (*Node, error) {
 	return nil, fmt.Errorf("can't not alloc more node")
 }
 
+// 归还offset
 func (t *Tree) putFreeBlocks(off OFFTYPE) {
 	if len(t.freeBlocks) >= MaxFreeBlocks {
 		return
@@ -488,18 +492,22 @@ func (t *Tree) Find(key uint64) (string, error) {
 		return "", nil
 	}
 
+	// 新建节点
 	if node, err = t.newMappingNodeFromPool(InvalidOffset); err != nil {
 		return "", err
 	}
 
+	// 找到key所在的node
 	if err = t.findLeaf(node, key); err != nil {
 		return "", err
 	}
 	defer t.putNodePool(node)
 
+	// 匹配
+	// TODO: 感觉可以用二分查找
 	for i, nkey := range node.Keys {
 		if nkey == key {
-			return node.Records[i], nil
+			return node.Values[i], nil
 		}
 	}
 	return "", ErrorNotFoundKey
@@ -516,6 +524,7 @@ func (t *Tree) findLeaf(node *Node, key uint64) error {
 		return nil
 	}
 
+	// 查找根节点
 	if root, err = t.newMappingNodeFromPool(c); err != nil {
 		return err
 	}
@@ -523,7 +532,10 @@ func (t *Tree) findLeaf(node *Node, key uint64) error {
 
 	*node = *root
 
+	// 遍历找到leaf 层级二分查找
 	for !node.IsLeaf {
+		// 查找
+		// TODO: ? B+树结构为保存最右最大节点 ?
 		idx := sort.Search(len(node.Keys), func(i int) bool {
 			return key <= node.Keys[i]
 		})
@@ -541,6 +553,7 @@ func cut(length int) int {
 	return (length + 1) / 2
 }
 
+// 插入叶子节点
 func insertKeyValIntoLeaf(n *Node, key uint64, rec string) (int, error) {
 	idx := sort.Search(len(n.Keys), func(i int) bool {
 		return key <= n.Keys[i]
@@ -550,16 +563,19 @@ func insertKeyValIntoLeaf(n *Node, key uint64, rec string) (int, error) {
 	}
 
 	n.Keys = append(n.Keys, key)
-	n.Records = append(n.Records, rec)
+	n.Values = append(n.Values, rec)
+	// 排序 插入到合适的位置
+	// TODO: 也可以用二分查找
 	for i := len(n.Keys) - 1; i > idx; i-- {
 		n.Keys[i] = n.Keys[i-1]
-		n.Records[i] = n.Records[i-1]
+		n.Values[i] = n.Values[i-1]
 	}
 	n.Keys[idx] = key
-	n.Records[idx] = rec
+	n.Values[idx] = rec
 	return idx, nil
 }
 
+// 插入非叶子节点
 func insertKeyValIntoNode(n *Node, key uint64, child OFFTYPE) (int, error) {
 	idx := sort.Search(len(n.Keys), func(i int) bool {
 		return key <= n.Keys[i]
@@ -579,14 +595,16 @@ func insertKeyValIntoNode(n *Node, key uint64, child OFFTYPE) (int, error) {
 	return idx, nil
 }
 
+// 移除叶子节点的数据
 func removeKeyFromLeaf(leaf *Node, idx int) {
 	tmpKeys := append([]uint64{}, leaf.Keys[idx+1:]...)
 	leaf.Keys = append(leaf.Keys[:idx], tmpKeys...)
 
-	tmpRecords := append([]string{}, leaf.Records[idx+1:]...)
-	leaf.Records = append(leaf.Records[:idx], tmpRecords...)
+	tmpRecords := append([]string{}, leaf.Values[idx+1:]...)
+	leaf.Values = append(leaf.Values[:idx], tmpRecords...)
 }
 
+// 移除非叶子节点
 func removeKeyFromNode(node *Node, idx int) {
 	tmpKeys := append([]uint64{}, node.Keys[idx+1:]...)
 	node.Keys = append(node.Keys[:idx], tmpKeys...)
@@ -595,36 +613,41 @@ func removeKeyFromNode(node *Node, idx int) {
 	node.Children = append(node.Children[:idx], tmpChildren...)
 }
 
-func (t *Tree) splitLeafIntoTowleaves(leaf *Node, new_leaf *Node) error {
+// 拆分成两个叶子节点
+func (t *Tree) splitLeafIntoTowleaves(leaf *Node, newLeaf *Node) error {
 	var (
 		i, split int
 	)
 	split = cut(order)
 
+	// newLeaf为新建的叶子节点
+	// insert的时候不会涉及到合并，删除的时候才会
 	for i = split; i <= order; i++ {
-		new_leaf.Keys = append(new_leaf.Keys, leaf.Keys[i])
-		new_leaf.Records = append(new_leaf.Records, leaf.Records[i])
+		newLeaf.Keys = append(newLeaf.Keys, leaf.Keys[i])
+		newLeaf.Values = append(newLeaf.Values, leaf.Values[i])
 	}
 
 	// adjust relation
 	leaf.Keys = leaf.Keys[:split]
-	leaf.Records = leaf.Records[:split]
+	leaf.Values = leaf.Values[:split]
 
-	new_leaf.Next = leaf.Next
-	leaf.Next = new_leaf.Self
-	new_leaf.Prev = leaf.Self
+	// 修改链接上下游
+	newLeaf.Next = leaf.Next
+	leaf.Next = newLeaf.Self
+	newLeaf.Prev = leaf.Self
+	// 共同的父节点
+	newLeaf.Parent = leaf.Parent
 
-	new_leaf.Parent = leaf.Parent
-
-	if new_leaf.Next != InvalidOffset {
+	if newLeaf.Next != InvalidOffset {
 		var (
 			nextNode *Node
 			err      error
 		)
-		if nextNode, err = t.newMappingNodeFromPool(new_leaf.Next); err != nil {
+		// TODO: ？之前没存储么？？
+		if nextNode, err = t.newMappingNodeFromPool(newLeaf.Next); err != nil {
 			return err
 		}
-		nextNode.Prev = new_leaf.Self
+		nextNode.Prev = newLeaf.Self
 		if err = t.flushNodesAndPutNodesPool(nextNode); err != nil {
 			return err
 		}
@@ -635,51 +658,59 @@ func (t *Tree) splitLeafIntoTowleaves(leaf *Node, new_leaf *Node) error {
 
 func (t *Tree) insertIntoLeaf(key uint64, rec string) error {
 	var (
-		leaf     *Node
-		err      error
-		idx      int
-		new_leaf *Node
+		leaf    *Node
+		err     error
+		idx     int
+		newLeaf *Node
 	)
 
 	if leaf, err = t.newMappingNodeFromPool(InvalidOffset); err != nil {
 		return err
 	}
 
+	// 找到新增节点的位置
 	if err = t.findLeaf(leaf, key); err != nil {
 		return err
 	}
 
+	// 写入数据
 	if idx, err = insertKeyValIntoLeaf(leaf, key, rec); err != nil {
 		return err
 	}
 
 	// update the last key of parent's if necessary
+	// 更新父节点的key
 	if err = t.mayUpdatedLastParentKey(leaf, idx); err != nil {
 		return err
 	}
 
 	// insert key/val into leaf
+	// 符合结点数量，则不需要拆分
 	if len(leaf.Keys) <= order {
 		return t.flushNodeAndPutNodePool(leaf)
 	}
 
 	// split leaf so new leaf node
-	if new_leaf, err = t.newNodeFromDisk(); err != nil {
-		return err
-	}
-	new_leaf.IsLeaf = true
-	if err = t.splitLeafIntoTowleaves(leaf, new_leaf); err != nil {
-		return err
-	}
+	// 拆分成两个叶子节点
 
-	if err = t.flushNodesAndPutNodesPool(new_leaf, leaf); err != nil {
+	if newLeaf, err = t.newNodeFromDisk(); err != nil {
+		return err
+	}
+	newLeaf.IsLeaf = true
+	if err = t.splitLeafIntoTowleaves(leaf, newLeaf); err != nil {
+		return err
+	}
+	// 落盘
+	if err = t.flushNodesAndPutNodesPool(newLeaf, leaf); err != nil {
 		return err
 	}
 
 	// insert split key into parent
-	return t.insertIntoParent(leaf.Parent, leaf.Self, leaf.Keys[len(leaf.Keys)-1], new_leaf.Self)
+	// 拆分成两个子节点之后，需要有一个新的父节点 存储最大值
+	return t.insertIntoParent(leaf.Parent, leaf.Self, leaf.Keys[len(leaf.Keys)-1], newLeaf.Self)
 }
 
+// 获取key对应位置
 func getIndex(keys []uint64, key uint64) int {
 	idx := sort.Search(len(keys), func(i int) bool {
 		return key <= keys[i]
@@ -687,16 +718,19 @@ func getIndex(keys []uint64, key uint64) int {
 	return idx
 }
 
+// 新增结点插入到父节点
 func insertIntoNode(parent *Node, idx int, left_off OFFTYPE, key uint64, right_off OFFTYPE) {
 	var (
 		i int
 	)
+	// 调整位置
 	parent.Keys = append(parent.Keys, key)
 	for i = len(parent.Keys) - 1; i > idx; i-- {
 		parent.Keys[i] = parent.Keys[i-1]
 	}
 	parent.Keys[idx] = key
 
+	// 跟父节点的子节点
 	if idx == len(parent.Children) {
 		parent.Children = append(parent.Children, right_off)
 		return
@@ -705,7 +739,8 @@ func insertIntoNode(parent *Node, idx int, left_off OFFTYPE, key uint64, right_o
 	parent.Children = append(append(parent.Children[:idx+1], right_off), tmpChildren...)
 }
 
-func (t *Tree) insertIntoNodeAfterSplitting(old_node *Node) error {
+// 插入结点拆分后父节点结点树超过order
+func (t *Tree) insertIntoNodeAfterSplitting(oldNode *Node) error {
 	var (
 		newNode, child, nextNode *Node
 		err                      error
@@ -719,11 +754,11 @@ func (t *Tree) insertIntoNodeAfterSplitting(old_node *Node) error {
 	split = cut(order)
 
 	for i = split; i <= order; i++ {
-		newNode.Children = append(newNode.Children, old_node.Children[i])
-		newNode.Keys = append(newNode.Keys, old_node.Keys[i])
+		newNode.Children = append(newNode.Children, oldNode.Children[i])
+		newNode.Keys = append(newNode.Keys, oldNode.Keys[i])
 
 		// update new_node children relation
-		if child, err = t.newMappingNodeFromPool(old_node.Children[i]); err != nil {
+		if child, err = t.newMappingNodeFromPool(oldNode.Children[i]); err != nil {
 			return err
 		}
 		child.Parent = newNode.Self
@@ -731,15 +766,16 @@ func (t *Tree) insertIntoNodeAfterSplitting(old_node *Node) error {
 			return err
 		}
 	}
-	newNode.Parent = old_node.Parent
+	newNode.Parent = oldNode.Parent
 
-	old_node.Children = old_node.Children[:split]
-	old_node.Keys = old_node.Keys[:split]
+	oldNode.Children = oldNode.Children[:split]
+	oldNode.Keys = oldNode.Keys[:split]
 
-	newNode.Next = old_node.Next
-	old_node.Next = newNode.Self
-	newNode.Prev = old_node.Self
+	newNode.Next = oldNode.Next
+	oldNode.Next = newNode.Self
+	newNode.Prev = oldNode.Self
 
+	// 更新relation
 	if newNode.Next != InvalidOffset {
 		if nextNode, err = t.newMappingNodeFromPool(newNode.Next); err != nil {
 			return err
@@ -750,14 +786,18 @@ func (t *Tree) insertIntoNodeAfterSplitting(old_node *Node) error {
 		}
 	}
 
-	if err = t.flushNodesAndPutNodesPool(old_node, newNode); err != nil {
+	if err = t.flushNodesAndPutNodesPool(oldNode, newNode); err != nil {
 		return err
 	}
 
-	return t.insertIntoParent(old_node.Parent, old_node.Self, old_node.Keys[len(old_node.Keys)-1], newNode.Self)
+	// 循环更新父节点 直至不需要更新or更新到根节点
+	return t.insertIntoParent(
+		oldNode.Parent, oldNode.Self, oldNode.Keys[len(oldNode.Keys)-1], newNode.Self)
 }
 
-func (t *Tree) insertIntoParent(parent_off OFFTYPE, left_off OFFTYPE, key uint64, right_off OFFTYPE) error {
+// 更新父节点 （非叶子节点）
+func (t *Tree) insertIntoParent(
+	parentOff OFFTYPE, leftOff OFFTYPE, key uint64, rightOff OFFTYPE) error {
 	var (
 		idx    int
 		parent *Node
@@ -765,11 +805,12 @@ func (t *Tree) insertIntoParent(parent_off OFFTYPE, left_off OFFTYPE, key uint64
 		left   *Node
 		right  *Node
 	)
-	if parent_off == OFFTYPE(InvalidOffset) {
-		if left, err = t.newMappingNodeFromPool(left_off); err != nil {
+	// 如果更新的是根节点
+	if parentOff == OFFTYPE(InvalidOffset) {
+		if left, err = t.newMappingNodeFromPool(leftOff); err != nil {
 			return err
 		}
-		if right, err = t.newMappingNodeFromPool(right_off); err != nil {
+		if right, err = t.newMappingNodeFromPool(rightOff); err != nil {
 			return err
 		}
 		if err = t.newRootNode(left, right); err != nil {
@@ -778,17 +819,21 @@ func (t *Tree) insertIntoParent(parent_off OFFTYPE, left_off OFFTYPE, key uint64
 		return t.flushNodesAndPutNodesPool(left, right)
 	}
 
-	if parent, err = t.newMappingNodeFromPool(parent_off); err != nil {
+	if parent, err = t.newMappingNodeFromPool(parentOff); err != nil {
 		return err
 	}
 
+	// 获取插入位置
 	idx = getIndex(parent.Keys, key)
-	insertIntoNode(parent, idx, left_off, key, right_off)
+	// 更新父节点的信息
+	insertIntoNode(parent, idx, leftOff, key, rightOff)
 
+	// 落盘
 	if len(parent.Keys) <= order {
 		return t.flushNodesAndPutNodesPool(parent)
 	}
 
+	// 父节点也超过order，需要拆分
 	return t.insertIntoNodeAfterSplitting(parent)
 }
 
@@ -812,6 +857,7 @@ func (t *Tree) newRootNode(left *Node, right *Node) error {
 	return t.flushNodeAndPutNodePool(root)
 }
 
+// Insert 插入节点
 func (t *Tree) Insert(key uint64, val string) error {
 	var (
 		err  error
@@ -826,7 +872,7 @@ func (t *Tree) Insert(key uint64, val string) error {
 		t.rootOff = node.Self
 		node.IsActive = true
 		node.Keys = append(node.Keys, key)
-		node.Records = append(node.Records, val)
+		node.Values = append(node.Values, val)
 		node.IsLeaf = true
 		return t.flushNodeAndPutNodePool(node)
 	}
@@ -834,6 +880,7 @@ func (t *Tree) Insert(key uint64, val string) error {
 	return t.insertIntoLeaf(key, val)
 }
 
+// Update 更新节点 逻辑比较简单 直接查找后更新落盘
 func (t *Tree) Update(key uint64, val string) error {
 	var (
 		node *Node
@@ -854,16 +901,19 @@ func (t *Tree) Update(key uint64, val string) error {
 
 	for i, nkey := range node.Keys {
 		if nkey == key {
-			node.Records[i] = val
+			node.Values[i] = val
 			return t.flushNodesAndPutNodesPool(node)
 		}
 	}
 	return ErrorNotFoundKey
 }
 
+// 如果插入的叶子节点放到了最后，需要更新父节点的值
 func (t *Tree) mayUpdatedLastParentKey(leaf *Node, idx int) error {
 	// update the last key of parent's if necessary
+	// 如果写入的是最后一个key，那么需要更新父节点的key
 	if idx == len(leaf.Keys)-1 && leaf.Parent != InvalidOffset {
+		// 最后一个key值
 		key := leaf.Keys[len(leaf.Keys)-1]
 		updateNodeOff := leaf.Parent
 		var (
@@ -871,9 +921,11 @@ func (t *Tree) mayUpdatedLastParentKey(leaf *Node, idx int) error {
 			node       *Node
 		)
 
+		// 拉取当前位置的节点
 		if node, err = t.newMappingNodeFromPool(leaf.Self); err != nil {
 			return err
 		}
+		// leaf覆盖
 		*node = *leaf
 		defer t.putNodePool(node)
 
@@ -881,16 +933,20 @@ func (t *Tree) mayUpdatedLastParentKey(leaf *Node, idx int) error {
 			if updateNode, err = t.newMappingNodeFromPool(updateNodeOff); err != nil {
 				return err
 			}
+			// 找到父节点中上述子节点的index
 			for i, v := range updateNode.Children {
 				if v == node.Self {
 					idx = i
 					break
 				}
 			}
+			// 更新父节点的idx的key值
 			updateNode.Keys[idx] = key
+			// 落盘
 			if err = t.flushNodeAndPutNodePool(updateNode); err != nil {
 				return err
 			}
+			// 继续向上更新
 			updateNodeOff = updateNode.Parent
 			*node = *updateNode
 		}
@@ -1105,7 +1161,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		// lease from next leaf
 		if len(nextLeaf.Keys) > order/2 {
 			key := nextLeaf.Keys[0]
-			rec := nextLeaf.Records[0]
+			rec := nextLeaf.Values[0]
 			removeKeyFromLeaf(nextLeaf, 0)
 			if idx, err = insertKeyValIntoLeaf(leaf, key, rec); err != nil {
 				return err
@@ -1132,7 +1188,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		}
 
 		nextLeaf.Keys = append(leaf.Keys, nextLeaf.Keys...)
-		nextLeaf.Records = append(leaf.Records, nextLeaf.Records...)
+		nextLeaf.Values = append(leaf.Values, nextLeaf.Values...)
 
 		leaf.IsActive = false
 		t.putFreeBlocks(leaf.Self)
@@ -1152,7 +1208,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		// lease from prev leaf
 		if len(prevLeaf.Keys) > order/2 {
 			key := prevLeaf.Keys[len(prevLeaf.Keys)-1]
-			rec := prevLeaf.Records[len(prevLeaf.Records)-1]
+			rec := prevLeaf.Values[len(prevLeaf.Values)-1]
 			removeKeyFromLeaf(prevLeaf, len(prevLeaf.Keys)-1)
 			if idx, err = insertKeyValIntoLeaf(leaf, key, rec); err != nil {
 				return err
@@ -1166,7 +1222,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		// merge prevleaf and curleaf
 		prevLeaf.Next = InvalidOffset
 		prevLeaf.Keys = append(prevLeaf.Keys, leaf.Keys...)
-		prevLeaf.Records = append(prevLeaf.Records, leaf.Records...)
+		prevLeaf.Values = append(prevLeaf.Values, leaf.Values...)
 
 		leaf.IsActive = false
 		t.putFreeBlocks(leaf.Self)
