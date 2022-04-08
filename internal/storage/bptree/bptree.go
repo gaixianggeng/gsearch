@@ -17,16 +17,25 @@ var (
 )
 
 const (
-	INVALID_OFFSET = 0xdeadbeef
-	MAX_FREEBLOCKS = 100
+	// InvalidOffset --
+	InvalidOffset = 0xdeadbeef
+	// MaxFreeBlocks --
+	MaxFreeBlocks = 100
 )
 
-var HasExistedKeyError = errors.New("hasExistedKey")
-var NotFoundKey = errors.New("notFoundKey")
-var InvalidDBFormat = errors.New("invalid db format")
+// ErrorHasExistedKey --
+var ErrorHasExistedKey = errors.New("hasExistedKey")
 
+// ErrorNotFoundKey --
+var ErrorNotFoundKey = errors.New("notFoundKey")
+
+// ErrorInvalidDBFormat --
+var ErrorInvalidDBFormat = errors.New("invalid db format")
+
+// OFFTYPE --
 type OFFTYPE uint64
 
+// Tree b+树自身信息
 type Tree struct {
 	rootOff    OFFTYPE
 	nodePool   *sync.Pool
@@ -36,6 +45,7 @@ type Tree struct {
 	fileSize   uint64 // b+树文件大小
 }
 
+// Node 节点信息
 type Node struct {
 	IsActive bool // 节点所在的磁盘空间是否在当前b+树内
 	Children []OFFTYPE
@@ -48,6 +58,7 @@ type Node struct {
 	IsLeaf   bool // 是否为叶子节点
 }
 
+// NewTree --
 func NewTree(filename string) (*Tree, error) {
 	var (
 		stat  syscall.Statfs_t
@@ -57,13 +68,13 @@ func NewTree(filename string) (*Tree, error) {
 
 	t := &Tree{}
 
-	t.rootOff = INVALID_OFFSET
+	t.rootOff = InvalidOffset
 	t.nodePool = &sync.Pool{
 		New: func() interface{} {
 			return &Node{}
 		},
 	}
-	t.freeBlocks = make([]OFFTYPE, 0, MAX_FREEBLOCKS)
+	t.freeBlocks = make([]OFFTYPE, 0, MaxFreeBlocks)
 	if t.file, err = os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0644); err != nil {
 		return nil, err
 	}
@@ -118,9 +129,9 @@ func (t *Tree) restructRootNode() error {
 		}
 	}
 	if !node.IsActive {
-		return InvalidDBFormat
+		return ErrorInvalidDBFormat
 	}
-	for node.Parent != INVALID_OFFSET {
+	for node.Parent != InvalidOffset {
 		if err = t.seekNode(node, node.Parent); err != nil {
 			return err
 		}
@@ -138,7 +149,7 @@ func (t *Tree) checkDiskBlockForFreeNodeList() error {
 	node := &Node{}
 	bs := t.blockSize
 	// 统计free blocks
-	for off := uint64(0); off < t.fileSize && len(t.freeBlocks) < MAX_FREEBLOCKS; off += bs {
+	for off := uint64(0); off < t.fileSize && len(t.freeBlocks) < MaxFreeBlocks; off += bs {
 		if off+bs > t.fileSize {
 			break
 		}
@@ -152,7 +163,7 @@ func (t *Tree) checkDiskBlockForFreeNodeList() error {
 
 	// 分配满blocks
 	nextFile := ((t.fileSize + 4095) / 4096) * 4096
-	for len(t.freeBlocks) < MAX_FREEBLOCKS {
+	for len(t.freeBlocks) < MaxFreeBlocks {
 		t.freeBlocks = append(t.freeBlocks, OFFTYPE(nextFile))
 		nextFile += bs
 	}
@@ -163,10 +174,10 @@ func (t *Tree) checkDiskBlockForFreeNodeList() error {
 func (t *Tree) initNodeForUsage(node *Node) {
 	node.IsActive = true
 	node.Children = nil
-	node.Self = INVALID_OFFSET
-	node.Next = INVALID_OFFSET
-	node.Prev = INVALID_OFFSET
-	node.Parent = INVALID_OFFSET
+	node.Self = InvalidOffset
+	node.Next = InvalidOffset
+	node.Prev = InvalidOffset
+	node.Parent = InvalidOffset
 	node.Keys = nil
 	node.Records = nil
 	node.IsLeaf = false
@@ -175,10 +186,10 @@ func (t *Tree) initNodeForUsage(node *Node) {
 func (t *Tree) clearNodeForUsage(node *Node) {
 	node.IsActive = false
 	node.Children = nil
-	node.Self = INVALID_OFFSET
-	node.Next = INVALID_OFFSET
-	node.Prev = INVALID_OFFSET
-	node.Parent = INVALID_OFFSET
+	node.Self = InvalidOffset
+	node.Next = InvalidOffset
+	node.Prev = InvalidOffset
+	node.Parent = InvalidOffset
 	node.Keys = nil
 	node.Records = nil
 	node.IsLeaf = false
@@ -318,6 +329,7 @@ func (t *Tree) putNodePool(n *Node) {
 	t.nodePool.Put(n)
 }
 
+// 将node写入文件
 func (t *Tree) flushNode(n *Node) error {
 	if n == nil {
 		return fmt.Errorf("flushNode == nil")
@@ -420,9 +432,10 @@ func (t *Tree) flushNode(n *Node) error {
 func (t *Tree) newMappingNodeFromPool(off OFFTYPE) (*Node, error) {
 	node := t.nodePool.Get().(*Node)
 	t.initNodeForUsage(node)
-	if off == INVALID_OFFSET {
+	if off == InvalidOffset {
 		return node, nil
 	}
+	// 如果offset存在的话，说明是从文件中读取的，读取数据赋值给node
 	t.clearNodeForUsage(node)
 	if err := t.seekNode(node, off); err != nil {
 		return nil, err
@@ -430,6 +443,7 @@ func (t *Tree) newMappingNodeFromPool(off OFFTYPE) (*Node, error) {
 	return node, nil
 }
 
+// 为node赋值磁盘的offset
 func (t *Tree) newNodeFromDisk() (*Node, error) {
 	var (
 		node *Node
@@ -457,23 +471,24 @@ func (t *Tree) newNodeFromDisk() (*Node, error) {
 }
 
 func (t *Tree) putFreeBlocks(off OFFTYPE) {
-	if len(t.freeBlocks) >= MAX_FREEBLOCKS {
+	if len(t.freeBlocks) >= MaxFreeBlocks {
 		return
 	}
 	t.freeBlocks = append(t.freeBlocks, off)
 }
 
+// Find 查找node
 func (t *Tree) Find(key uint64) (string, error) {
 	var (
 		node *Node
 		err  error
 	)
 
-	if t.rootOff == INVALID_OFFSET {
+	if t.rootOff == InvalidOffset {
 		return "", nil
 	}
 
-	if node, err = t.newMappingNodeFromPool(INVALID_OFFSET); err != nil {
+	if node, err = t.newMappingNodeFromPool(InvalidOffset); err != nil {
 		return "", err
 	}
 
@@ -487,7 +502,7 @@ func (t *Tree) Find(key uint64) (string, error) {
 			return node.Records[i], nil
 		}
 	}
-	return "", NotFoundKey
+	return "", ErrorNotFoundKey
 }
 
 func (t *Tree) findLeaf(node *Node, key uint64) error {
@@ -497,7 +512,7 @@ func (t *Tree) findLeaf(node *Node, key uint64) error {
 	)
 
 	c := t.rootOff
-	if c == INVALID_OFFSET {
+	if c == InvalidOffset {
 		return nil
 	}
 
@@ -531,7 +546,7 @@ func insertKeyValIntoLeaf(n *Node, key uint64, rec string) (int, error) {
 		return key <= n.Keys[i]
 	})
 	if idx < len(n.Keys) && n.Keys[idx] == key {
-		return 0, HasExistedKeyError
+		return 0, ErrorHasExistedKey
 	}
 
 	n.Keys = append(n.Keys, key)
@@ -550,7 +565,7 @@ func insertKeyValIntoNode(n *Node, key uint64, child OFFTYPE) (int, error) {
 		return key <= n.Keys[i]
 	})
 	if idx < len(n.Keys) && n.Keys[idx] == key {
-		return 0, HasExistedKeyError
+		return 0, ErrorHasExistedKey
 	}
 
 	n.Keys = append(n.Keys, key)
@@ -601,7 +616,7 @@ func (t *Tree) splitLeafIntoTowleaves(leaf *Node, new_leaf *Node) error {
 
 	new_leaf.Parent = leaf.Parent
 
-	if new_leaf.Next != INVALID_OFFSET {
+	if new_leaf.Next != InvalidOffset {
 		var (
 			nextNode *Node
 			err      error
@@ -626,7 +641,7 @@ func (t *Tree) insertIntoLeaf(key uint64, rec string) error {
 		new_leaf *Node
 	)
 
-	if leaf, err = t.newMappingNodeFromPool(INVALID_OFFSET); err != nil {
+	if leaf, err = t.newMappingNodeFromPool(InvalidOffset); err != nil {
 		return err
 	}
 
@@ -725,7 +740,7 @@ func (t *Tree) insertIntoNodeAfterSplitting(old_node *Node) error {
 	old_node.Next = newNode.Self
 	newNode.Prev = old_node.Self
 
-	if newNode.Next != INVALID_OFFSET {
+	if newNode.Next != InvalidOffset {
 		if nextNode, err = t.newMappingNodeFromPool(newNode.Next); err != nil {
 			return err
 		}
@@ -750,7 +765,7 @@ func (t *Tree) insertIntoParent(parent_off OFFTYPE, left_off OFFTYPE, key uint64
 		left   *Node
 		right  *Node
 	)
-	if parent_off == OFFTYPE(INVALID_OFFSET) {
+	if parent_off == OFFTYPE(InvalidOffset) {
 		if left, err = t.newMappingNodeFromPool(left_off); err != nil {
 			return err
 		}
@@ -804,7 +819,7 @@ func (t *Tree) Insert(key uint64, val string) error {
 	)
 
 	// 如果是根节点 直接插入
-	if t.rootOff == INVALID_OFFSET {
+	if t.rootOff == InvalidOffset {
 		if node, err = t.newNodeFromDisk(); err != nil {
 			return err
 		}
@@ -825,11 +840,11 @@ func (t *Tree) Update(key uint64, val string) error {
 		err  error
 	)
 
-	if t.rootOff == INVALID_OFFSET {
-		return NotFoundKey
+	if t.rootOff == InvalidOffset {
+		return ErrorNotFoundKey
 	}
 
-	if node, err = t.newMappingNodeFromPool(INVALID_OFFSET); err != nil {
+	if node, err = t.newMappingNodeFromPool(InvalidOffset); err != nil {
 		return err
 	}
 
@@ -843,12 +858,12 @@ func (t *Tree) Update(key uint64, val string) error {
 			return t.flushNodesAndPutNodesPool(node)
 		}
 	}
-	return NotFoundKey
+	return ErrorNotFoundKey
 }
 
 func (t *Tree) mayUpdatedLastParentKey(leaf *Node, idx int) error {
 	// update the last key of parent's if necessary
-	if idx == len(leaf.Keys)-1 && leaf.Parent != INVALID_OFFSET {
+	if idx == len(leaf.Keys)-1 && leaf.Parent != InvalidOffset {
 		key := leaf.Keys[len(leaf.Keys)-1]
 		updateNodeOff := leaf.Parent
 		var (
@@ -862,7 +877,7 @@ func (t *Tree) mayUpdatedLastParentKey(leaf *Node, idx int) error {
 		*node = *leaf
 		defer t.putNodePool(node)
 
-		for updateNodeOff != INVALID_OFFSET && idx == len(node.Keys)-1 {
+		for updateNodeOff != InvalidOffset && idx == len(node.Keys)-1 {
 			if updateNode, err = t.newMappingNodeFromPool(updateNodeOff); err != nil {
 				return err
 			}
@@ -884,7 +899,7 @@ func (t *Tree) mayUpdatedLastParentKey(leaf *Node, idx int) error {
 }
 
 func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
-	if off == INVALID_OFFSET {
+	if off == InvalidOffset {
 		return nil
 	}
 	var (
@@ -919,12 +934,12 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 			return err
 		}
 		node.IsActive = false
-		newRoot.Parent = INVALID_OFFSET
+		newRoot.Parent = InvalidOffset
 		t.rootOff = newRoot.Self
 		return t.flushNodesAndPutNodesPool(node, newRoot)
 	}
 
-	if node.Next != INVALID_OFFSET {
+	if node.Next != InvalidOffset {
 		if nextNode, err = t.newMappingNodeFromPool(node.Next); err != nil {
 			return err
 		}
@@ -950,7 +965,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 			return t.flushNodesAndPutNodesPool(node, nextNode, childNode)
 		}
 		// merge nextNode and curNode
-		if node.Prev != INVALID_OFFSET {
+		if node.Prev != InvalidOffset {
 			if prevNode, err = t.newMappingNodeFromPool(node.Prev); err != nil {
 				return err
 			}
@@ -960,7 +975,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 				return err
 			}
 		} else {
-			nextNode.Prev = INVALID_OFFSET
+			nextNode.Prev = InvalidOffset
 		}
 
 		nextNode.Keys = append(node.Keys, nextNode.Keys...)
@@ -989,7 +1004,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 	}
 
 	// come here because node.Next = INVALID_OFFSET
-	if node.Prev != INVALID_OFFSET {
+	if node.Prev != InvalidOffset {
 		if prevNode, err = t.newMappingNodeFromPool(node.Prev); err != nil {
 			return err
 		}
@@ -1015,7 +1030,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 			return t.flushNodesAndPutNodesPool(prevNode, node, childNode)
 		}
 		// merge prevNode and curNode
-		prevNode.Next = INVALID_OFFSET
+		prevNode.Next = InvalidOffset
 		prevNode.Keys = append(prevNode.Keys, node.Keys...)
 		prevNode.Children = append(prevNode.Children, node.Children...)
 
@@ -1050,7 +1065,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		err      error
 		idx      int
 	)
-	if leaf, err = t.newMappingNodeFromPool(INVALID_OFFSET); err != nil {
+	if leaf, err = t.newMappingNodeFromPool(InvalidOffset); err != nil {
 		return err
 	}
 
@@ -1083,7 +1098,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		return t.flushNodesAndPutNodesPool(leaf)
 	}
 
-	if leaf.Next != INVALID_OFFSET {
+	if leaf.Next != InvalidOffset {
 		if nextLeaf, err = t.newMappingNodeFromPool(leaf.Next); err != nil {
 			return err
 		}
@@ -1103,7 +1118,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		}
 
 		// merge nextLeaf and curleaf
-		if leaf.Prev != INVALID_OFFSET {
+		if leaf.Prev != InvalidOffset {
 			if prevLeaf, err = t.newMappingNodeFromPool(leaf.Prev); err != nil {
 				return err
 			}
@@ -1113,7 +1128,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 				return err
 			}
 		} else {
-			nextLeaf.Prev = INVALID_OFFSET
+			nextLeaf.Prev = InvalidOffset
 		}
 
 		nextLeaf.Keys = append(leaf.Keys, nextLeaf.Keys...)
@@ -1130,7 +1145,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 	}
 
 	// come here because leaf.Next = INVALID_OFFSET
-	if leaf.Prev != INVALID_OFFSET {
+	if leaf.Prev != InvalidOffset {
 		if prevLeaf, err = t.newMappingNodeFromPool(leaf.Prev); err != nil {
 			return err
 		}
@@ -1149,7 +1164,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 			return t.flushNodesAndPutNodesPool(prevLeaf, leaf)
 		}
 		// merge prevleaf and curleaf
-		prevLeaf.Next = INVALID_OFFSET
+		prevLeaf.Next = InvalidOffset
 		prevLeaf.Keys = append(prevLeaf.Keys, leaf.Keys...)
 		prevLeaf.Records = append(prevLeaf.Records, leaf.Records...)
 
@@ -1167,14 +1182,14 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 }
 
 func (t *Tree) Delete(key uint64) error {
-	if t.rootOff == INVALID_OFFSET {
+	if t.rootOff == InvalidOffset {
 		return fmt.Errorf("not found key:%d", key)
 	}
 	return t.deleteKeyFromLeaf(key)
 }
 
 func (t *Tree) ScanTreePrint() error {
-	if t.rootOff == INVALID_OFFSET {
+	if t.rootOff == InvalidOffset {
 		return fmt.Errorf("root = nil")
 	}
 	Q := make([]OFFTYPE, 0)

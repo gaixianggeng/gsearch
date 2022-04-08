@@ -9,14 +9,14 @@ import (
 func TestBptree(t *testing.T) {
 	var (
 		tree *Tree
-		err error
+		err  error
 	)
 	if tree, err = NewTree("./data.db"); err != nil {
 		t.Fatal(err)
 	}
 
 	// insert
-	for i := 0;i < 20;i++ {
+	for i := 0; i < 20; i++ {
 		val := fmt.Sprintf("%d", i)
 		if err = tree.Insert(uint64(i), val); err != nil {
 			t.Fatal(err)
@@ -24,15 +24,15 @@ func TestBptree(t *testing.T) {
 	}
 
 	// insert same key repeatedly
-	for i := 0;i < 20;i++ {
+	for i := 0; i < 20; i++ {
 		val := fmt.Sprintf("%d", i)
-		if err = tree.Insert(uint64(i), val); err != HasExistedKeyError {
+		if err = tree.Insert(uint64(i), val); err != ErrorHasExistedKey {
 			t.Fatal(err)
 		}
 	}
 
 	// find key
-	for i := 0;i < 20;i++ {
+	for i := 0; i < 20; i++ {
 		oval := fmt.Sprintf("%d", i)
 		if val, err := tree.Find(uint64(i)); err != nil {
 			t.Fatal(err)
@@ -54,13 +54,12 @@ func TestBptree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := tree.Find(2); err != NotFoundKey {
+	if _, err := tree.Find(2); err != ErrorNotFoundKey {
 		t.Fatal(err)
 	}
 
 	// close tree
 	tree.Close()
-
 
 	//repoen tree
 	if tree, err = NewTree("./data.db"); err != nil {
@@ -70,7 +69,7 @@ func TestBptree(t *testing.T) {
 	defer tree.Close()
 
 	// find
-	if _, err := tree.Find(2); err != NotFoundKey {
+	if _, err := tree.Find(2); err != ErrorNotFoundKey {
 		t.Fatal(err)
 	}
 
@@ -82,8 +81,8 @@ func TestBptree(t *testing.T) {
 	// find {key: 18, val : "19"}
 	if val, err := tree.Find(18); err != nil {
 		t.Fatal(err)
- 	} else if "19" != val {
- 		t.Fatal(fmt.Errorf("Expect %s, but get %s", "19", val))
+	} else if "19" != val {
+		t.Fatal(fmt.Errorf("Expect %s, but get %s", "19", val))
 	}
 
 	// second print
