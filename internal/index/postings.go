@@ -180,7 +180,7 @@ func (e *Engine) text2PostingsLists(docID uint64, text []byte) error {
 }
 
 func (e *Engine) token2PostingsLists(
-	bufInvertHash InvertedIndexHash, token []byte,
+	bufInvertHash InvertedIndexHash, token []rune,
 	position uint64, docID uint64) error {
 
 	bufInvert := new(InvertedIndexValue)

@@ -11,7 +11,7 @@ func (d *ForwardDB) Add(title, body []byte) (uint64, error) {
 }
 
 // GetTokenID 获取tokenid和出现次数
-func (d *ForwardDB) GetTokenID(token []byte, docID uint64) (uint64, uint64, error) {
+func (d *ForwardDB) GetTokenID(token []rune, docID uint64) (uint64, uint64, error) {
 	return 0, 0, nil
 }
 
