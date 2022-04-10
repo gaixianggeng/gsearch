@@ -3,7 +3,6 @@ package bptree
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 )
 
@@ -60,7 +59,6 @@ func TestBptree(t *testing.T) {
 			t.Fatal(err)
 		}
 		tree.ScanTreePrint()
-		fmt.Println(strings.Repeat("-", 50))
 	}
 
 	if _, err := tree.Find(2); err != ErrorNotFoundKey {
@@ -69,7 +67,6 @@ func TestBptree(t *testing.T) {
 
 	// close tree
 	tree.Close()
-	fmt.Println(strings.Repeat("-", 50))
 	//repoen tree
 	if tree, err = NewTree("./data.db"); err != nil {
 		t.Fatal(err)

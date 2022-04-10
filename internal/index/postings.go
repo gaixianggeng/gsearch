@@ -4,6 +4,8 @@ import (
 	"brain/internal/query"
 	"brain/internal/storage"
 	"bytes"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 )
 
@@ -43,7 +45,7 @@ func mergePostings(pa, pb *PostingsList) *PostingsList {
 func mergeInvertedIndex(base, toBeAdded InvertedIndexHash) {
 	for tokenID, index := range base {
 		if toBeAddedIndex, ok := (toBeAdded)[tokenID]; ok {
-			index.postingList = mergePostings(index.postingList, toBeAddedIndex.postingList)
+			index.postingsList = mergePostings(index.postingsList, toBeAddedIndex.postingsList)
 			index.docsCount += toBeAddedIndex.docsCount
 			delete(toBeAdded, tokenID)
 		}
@@ -61,10 +63,15 @@ func decodePostings() {
 
 // 编码
 // bytes.Buffer
-func encodePostings(postings *PostingsList, docCount uint64) *bytes.Buffer {
+func encodePostings(postings *PostingsList, docCount uint64) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer([]byte{})
-
-	return buf
+	p, err := json.Marshal(postings)
+	if err != nil {
+		return buf, fmt.Errorf("encodePostings json.Marshal err::%v", err)
+	}
+	buf.Write(p)
+	binary.Write(buf, binary.BigEndian, docCount)
+	return buf, nil
 
 	// static int encode_postings_none(
 	// const postings_list *postings,
@@ -101,13 +108,21 @@ func (e *Engine) updatePostings(p *InvertedIndexValue) error {
 	}
 	// merge
 	if size > 0 {
-		p.postingList = mergePostings(oldPostings, p.postingList)
+		p.postingsList = mergePostings(oldPostings, p.postingsList)
 		p.docsCount += size
 	}
 	// 开始写入数据库
-	buf := encodePostings(p.postingList, p.docsCount)
-
-	return storage.DBUpdatePostings(e.invertedDB, p.TokenID, p.docsCount, buf, uint64(buf.Len()))
+	buf, err := encodePostings(p.postingsList, p.docsCount)
+	if err != nil {
+		return fmt.Errorf("updatePostings encodePostings err: %v", err)
+	}
+	return storage.DBUpdatePostings(
+		e.invertedDB,
+		p.TokenID,
+		&storage.InvertedItem{
+			PostingsList: buf.Bytes(),
+			PostingsSize: uint64(buf.Len()),
+			DocCount:     p.docsCount})
 }
 
 // /**
@@ -185,7 +200,7 @@ func (e *Engine) token2PostingsLists(
 
 	pl := new(PostingsList)
 	if bufInvert != nil {
-		pl = bufInvert.postingList
+		pl = bufInvert.postingsList
 		// 这里的positioinCount和下面bufInvert的po
 		pl.positionCount++
 	} else {
@@ -194,8 +209,8 @@ func (e *Engine) token2PostingsLists(
 		}
 		bufInvert = createNewInvertedIndex(tokenID, docCount)
 		bufInvertHash[tokenID] = bufInvert
-		pl = createNewPostingList(docID)
-		bufInvert.postingList = pl
+		pl = createNewPostingsList(docID)
+		bufInvert.postingsList = pl
 	}
 	// 存储位置信息
 	pl.positions = append(pl.positions, position)

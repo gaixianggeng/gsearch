@@ -27,7 +27,7 @@ type PostingsList struct {
 //InvertedIndexValue 倒排索引
 type InvertedIndexValue struct {
 	TokenID       uint64
-	postingList   *PostingsList
+	postingsList  *PostingsList
 	docsCount     uint64
 	positionCount uint64
 }
