@@ -19,7 +19,7 @@ func TestBptree(t *testing.T) {
 	// insert
 	for i := 0; i < 20; i++ {
 		val := fmt.Sprintf("%d", i)
-		if err = tree.Insert(uint64(i), val); err != nil {
+		if err = tree.Insert(uint64(i), []byte(val)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -27,7 +27,7 @@ func TestBptree(t *testing.T) {
 	// insert same key repeatedly
 	for i := 0; i < 20; i++ {
 		val := fmt.Sprintf("%d", i)
-		if err = tree.Insert(uint64(i), val); err != ErrorHasExistedKey {
+		if err = tree.Insert(uint64(i), []byte(val)); err != ErrorHasExistedKey {
 			t.Fatal(err)
 		}
 	}
@@ -38,7 +38,7 @@ func TestBptree(t *testing.T) {
 		if val, err := tree.Find(uint64(i)); err != nil {
 			t.Fatal(err)
 		} else {
-			if oval != val {
+			if oval != string(val) {
 				t.Fatal(fmt.Sprintf("not equal key:%d oval:%s, found val:%s", i, oval, val))
 			}
 		}
@@ -83,26 +83,26 @@ func TestBptree(t *testing.T) {
 	}
 
 	// update {key: 10, val : "19"}
-	if err := tree.Update(10, "19"); err != nil {
+	if err := tree.Update(10, []byte("19")); err != nil {
 		t.Fatal(err)
 	}
 
 	// find {key: 10, val : "19"}
 	if val, err := tree.Find(10); err != nil {
 		t.Fatal(err)
-	} else if "19" != val {
+	} else if "19" != string(val) {
 		t.Fatal(fmt.Errorf("Expect %s, but get %s", "19", val))
 	}
 
 	// second print
 	tree.ScanTreePrint()
 
-	if err = tree.Insert(uint64(16), "16"); err != nil {
+	if err = tree.Insert(uint64(16), []byte("16")); err != nil {
 		t.Fatal(err)
 	}
 
 	tree.ScanTreePrint()
-	if err = tree.Insert(uint64(17), "17"); err != nil {
+	if err = tree.Insert(uint64(17), []byte("17")); err != nil {
 		t.Fatal(err)
 	}
 

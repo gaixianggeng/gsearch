@@ -56,7 +56,7 @@ type Node struct {
 	Prev     OFFTYPE
 	Parent   OFFTYPE
 	Keys     []uint64
-	Values   []string
+	Values   [][]byte
 	IsLeaf   bool // 是否为叶子节点
 }
 
@@ -290,7 +290,7 @@ func (t *Tree) seekNode(node *Node, off OFFTYPE) error {
 	if err = binary.Read(bs, binary.LittleEndian, &recordCount); err != nil {
 		return err
 	}
-	node.Values = make([]string, recordCount)
+	node.Values = make([][]byte, recordCount)
 	for i := uint8(0); i < recordCount; i++ {
 		l := uint8(0)
 		if err = binary.Read(bs, binary.LittleEndian, &l); err != nil {
@@ -300,7 +300,7 @@ func (t *Tree) seekNode(node *Node, off OFFTYPE) error {
 		if err = binary.Read(bs, binary.LittleEndian, &v); err != nil {
 			return err
 		}
-		node.Values[i] = string(v)
+		node.Values[i] = v
 	}
 	// IsLeaf
 	if err = binary.Read(bs, binary.LittleEndian, &node.IsLeaf); err != nil {
@@ -483,24 +483,24 @@ func (t *Tree) putFreeBlocks(off OFFTYPE) {
 }
 
 // Find 查找node
-func (t *Tree) Find(key uint64) (string, error) {
+func (t *Tree) Find(key uint64) ([]byte, error) {
 	var (
 		node *Node
 		err  error
 	)
 
 	if t.rootOff == InvalidOffset {
-		return "", nil
+		return []byte{}, nil
 	}
 
 	// 新建节点
 	if node, err = t.newMappingNodeFromPool(InvalidOffset); err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
 	// 找到key所在的node
 	if err = t.findLeaf(node, key); err != nil {
-		return "", err
+		return []byte{}, err
 	}
 	defer t.putNodePool(node)
 
@@ -511,7 +511,7 @@ func (t *Tree) Find(key uint64) (string, error) {
 			return node.Values[i], nil
 		}
 	}
-	return "", ErrorNotFoundKey
+	return []byte{}, ErrorNotFoundKey
 }
 
 func (t *Tree) findLeaf(node *Node, key uint64) error {
@@ -555,7 +555,7 @@ func cut(length int) int {
 }
 
 // 插入叶子节点
-func insertKeyValIntoLeaf(n *Node, key uint64, rec string) (int, error) {
+func insertKeyValIntoLeaf(n *Node, key uint64, rec []byte) (int, error) {
 	idx := sort.Search(len(n.Keys), func(i int) bool {
 		return key <= n.Keys[i]
 	})
@@ -601,7 +601,7 @@ func removeKeyFromLeaf(leaf *Node, idx int) {
 	tmpKeys := append([]uint64{}, leaf.Keys[idx+1:]...)
 	leaf.Keys = append(leaf.Keys[:idx], tmpKeys...)
 
-	tmpRecords := append([]string{}, leaf.Values[idx+1:]...)
+	tmpRecords := append([][]byte{}, leaf.Values[idx+1:]...)
 	leaf.Values = append(leaf.Values[:idx], tmpRecords...)
 }
 
@@ -657,7 +657,7 @@ func (t *Tree) splitLeafIntoTowleaves(leaf *Node, newLeaf *Node) error {
 	return err
 }
 
-func (t *Tree) insertIntoLeaf(key uint64, rec string) error {
+func (t *Tree) insertIntoLeaf(key uint64, rec []byte) error {
 	var (
 		leaf    *Node
 		err     error
@@ -859,7 +859,7 @@ func (t *Tree) newRootNode(left *Node, right *Node) error {
 }
 
 // Insert 插入节点
-func (t *Tree) Insert(key uint64, val string) error {
+func (t *Tree) Insert(key uint64, val []byte) error {
 	var (
 		err  error
 		node *Node
@@ -882,7 +882,7 @@ func (t *Tree) Insert(key uint64, val string) error {
 }
 
 // Update 更新节点 逻辑比较简单 直接查找后更新落盘
-func (t *Tree) Update(key uint64, val string) error {
+func (t *Tree) Update(key uint64, val []byte) error {
 	var (
 		node *Node
 		err  error
