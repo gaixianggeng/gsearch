@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"syscall"
 )
@@ -971,6 +972,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 		return err
 	}
 	idx = getIndex(node.Keys, key)
+	fmt.Printf("delete key: %d from node: %d,keys:%v,idx:%d \n", key, off, node.Keys, idx)
 	removeKeyFromNode(node, idx)
 
 	// update the last key of parent's if necessary
@@ -985,6 +987,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 		return t.flushNodesAndPutNodesPool(node)
 	}
 
+	// 根节点
 	if off == t.rootOff && len(node.Keys) == 1 {
 		if newRoot, err = t.newMappingNodeFromPool(node.Children[0]); err != nil {
 			return err
@@ -1021,6 +1024,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 			return t.flushNodesAndPutNodesPool(node, nextNode, childNode)
 		}
 		// merge nextNode and curNode
+		// 合并节点
 		if node.Prev != InvalidOffset {
 			if prevNode, err = t.newMappingNodeFromPool(node.Prev); err != nil {
 				return err
@@ -1056,6 +1060,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 		}
 
 		// delete parent's key recursively
+		// 向上递归更新 删除父节点的key
 		return t.deleteKeyFromNode(node.Parent, node.Keys[len(node.Keys)-1])
 	}
 
@@ -1065,6 +1070,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 			return err
 		}
 		// lease from prev leaf
+		// 借一个
 		if len(prevNode.Keys) > order/2 {
 			key := prevNode.Keys[len(prevNode.Keys)-1]
 			child := prevNode.Children[len(prevNode.Children)-1]
@@ -1085,6 +1091,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 			}
 			return t.flushNodesAndPutNodesPool(prevNode, node, childNode)
 		}
+		// 不够的话 和前置节点合并
 		// merge prevNode and curNode
 		prevNode.Next = InvalidOffset
 		prevNode.Keys = append(prevNode.Keys, node.Keys...)
@@ -1108,7 +1115,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 			return err
 		}
 
-		return t.deleteKeyFromNode(node.Parent, node.Keys[len(node.Keys)-2])
+		return t.deleteKeyFromNode(node.Parent, node.Keys[len(node.Keys)-1])
 	}
 	return nil
 }
@@ -1125,7 +1132,6 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 	if leaf, err = t.newMappingNodeFromPool(InvalidOffset); err != nil {
 		return err
 	}
-
 	// 找到key对应的叶子节点
 	if err = t.findLeaf(leaf, key); err != nil {
 		return err
@@ -1245,9 +1251,24 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 		if err = t.flushNodesAndPutNodesPool(leaf, prevLeaf); err != nil {
 			return err
 		}
+
+		fmt.Println("pre keys:", prevLeaf.Keys)
+
+		preOff := prevLeaf.Self
+
 		// 删除父节点中已合并的key
-		// TODO: ?不会panic？？？
-		return t.deleteKeyFromNode(leaf.Parent, leaf.Keys[len(leaf.Keys)-2])
+		t.deleteKeyFromNode(leaf.Parent, leaf.Keys[len(leaf.Keys)-1])
+		t.ScanTreePrint()
+		var pre *Node
+		if pre, err = t.newMappingNodeFromPool(preOff); err != nil {
+			return err
+		}
+
+		fmt.Println("pre keys:", pre.Keys)
+		// 更新前置节点的父节点的值
+		t.mayUpdatedLastParentKey(pre, len(pre.Keys)-1)
+
+		// return t.deleteKeyFromNode(leaf.Parent, prevLeaf.Keys[len(prevLeaf.Keys)-2])
 	}
 
 	return nil
@@ -1297,5 +1318,6 @@ func (t *Tree) ScanTreePrint() error {
 		}
 		Q = Q[l:]
 	}
+	fmt.Println(strings.Repeat("-", 50))
 	return nil
 }

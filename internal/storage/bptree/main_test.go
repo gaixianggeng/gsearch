@@ -3,6 +3,7 @@ package bptree
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -53,6 +54,14 @@ func TestBptree(t *testing.T) {
 	if err := tree.Delete(2); err != nil {
 		t.Fatal(err)
 	}
+	keys := []uint64{19, 18, 17, 16, 13, 5}
+	for _, key := range keys {
+		if err := tree.Delete(key); err != nil {
+			t.Fatal(err)
+		}
+		tree.ScanTreePrint()
+		fmt.Println(strings.Repeat("-", 50))
+	}
 
 	if _, err := tree.Find(2); err != ErrorNotFoundKey {
 		t.Fatal(err)
@@ -60,7 +69,7 @@ func TestBptree(t *testing.T) {
 
 	// close tree
 	tree.Close()
-
+	fmt.Println(strings.Repeat("-", 50))
 	//repoen tree
 	if tree, err = NewTree("./data.db"); err != nil {
 		t.Fatal(err)
@@ -73,13 +82,13 @@ func TestBptree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// update {key: 18, val : "19"}
-	if err := tree.Update(18, "19"); err != nil {
+	// update {key: 10, val : "19"}
+	if err := tree.Update(10, "19"); err != nil {
 		t.Fatal(err)
 	}
 
-	// find {key: 18, val : "19"}
-	if val, err := tree.Find(18); err != nil {
+	// find {key: 10, val : "19"}
+	if val, err := tree.Find(10); err != nil {
 		t.Fatal(err)
 	} else if "19" != val {
 		t.Fatal(fmt.Errorf("Expect %s, but get %s", "19", val))
@@ -87,11 +96,15 @@ func TestBptree(t *testing.T) {
 
 	// second print
 	tree.ScanTreePrint()
-}
 
-func TestS(t *testing.T) {
-	a := make([]int, 0)
-	a = append(a, 1)
-	a = append(a, 2)
-	fmt.Println(a[len(a)-2])
+	if err = tree.Insert(uint64(16), "16"); err != nil {
+		t.Fatal(err)
+	}
+
+	tree.ScanTreePrint()
+	if err = tree.Insert(uint64(17), "17"); err != nil {
+		t.Fatal(err)
+	}
+
+	tree.ScanTreePrint()
 }
