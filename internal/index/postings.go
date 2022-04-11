@@ -185,9 +185,8 @@ func (e *Engine) token2PostingsLists(
 
 	bufInvert := new(InvertedIndexValue)
 
-	// 查询的是整个索引库 不是临时库
 	// doc_id用来标识写入数据还是查询数据
-	tokenID, docCount, err := e.forwardDB.GetTokenID(token, docID)
+	tokenID, docCount, err := e.tokenDB.GetTokenID(token, docID)
 	if err != nil {
 		return fmt.Errorf("token2PostingsLists GetTokenID err: %v", err)
 	}

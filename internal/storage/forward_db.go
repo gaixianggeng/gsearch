@@ -10,11 +10,6 @@ func (d *ForwardDB) Add(title, body []byte) (uint64, error) {
 	return 0, nil
 }
 
-// GetTokenID 获取tokenid和出现次数
-func (d *ForwardDB) GetTokenID(token []rune, docID uint64) (uint64, uint64, error) {
-	return 0, 0, nil
-}
-
 // /**
 //  * 将倒排列表存储到数据库中
 //  * @param[in] env 存储着应用程序运行环境的结构体

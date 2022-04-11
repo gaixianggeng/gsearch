@@ -37,3 +37,15 @@
 - [ ] ngaram
 - [ ] 测试用例
 
+
+
+### 数据库
+
+#### snowflake
+https://github.com/bwmarrin/snowflake
+
+#### 正排 b+树
+
+#### 倒排 b+树 
+
+#### token存储  hash存储
