@@ -11,9 +11,9 @@ const maxMapSize = 0x1000000000
 const maxMmapStep = 1 << 30 // 1GB
 
 func TestPage(t *testing.T) {
-	fmt.Println(os.Getpagesize())
+	fmt.Println("page:", os.Getpagesize())
 	writeMMap()
-	read()
+	// read()
 }
 func writeMMap() {
 	file, err := os.OpenFile("my.db", os.O_RDWR|os.O_CREATE, 0644)
@@ -21,12 +21,14 @@ func writeMMap() {
 		panic(err)
 	}
 	defer file.Close()
+	fmt.Println(file.Fd())
+	file.Fd()
 
 	stat, err := os.Stat("my.db")
 	if err != nil {
 		panic(err)
 	}
-
+	fmt.Println("stat:", stat.Size())
 	size, err := mmapSize(int(stat.Size()))
 	if err != nil {
 		panic(err)
@@ -51,10 +53,10 @@ func writeMMap() {
 	if err != nil {
 		panic(err)
 	}
+
 }
 
 func mmapSize(size int) (int, error) {
-	return maxMapSize, nil
 	// Double the size from 32KB until 1GB.
 	// 最小每次增加32kb
 	// 如果size小于1GB，每次double递增
@@ -108,12 +110,11 @@ func read() {
 	// b, err := syscall.Mmap(int(file.Fd()), 0, int(stat.Size()), syscall.PROT_READ, syscall.MAP_SHARED)
 	fmt.Println(int(file.Fd()))
 	fmt.Println(file.Fd())
-	b, err := syscall.Mmap(int(file.Fd()), int64(os.Getpagesize()), 4, syscall.PROT_READ, syscall.MAP_SHARED)
+	b, err := syscall.Mmap(int(file.Fd()), 0, 4, syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		panic(err)
 	}
 	defer syscall.Munmap(b)
-
 	fmt.Println(string(b))
 	fmt.Println(len(b))
 }

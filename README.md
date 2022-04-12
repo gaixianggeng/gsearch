@@ -32,11 +32,6 @@
 * 对数合并
 * lucene
 
----
-
-- [ ] ngaram
-- [ ] 测试用例
-
 
 
 ### 数据库
@@ -49,3 +44,18 @@ https://github.com/bwmarrin/snowflake
 #### 倒排 b+树 
 
 #### token存储  hash存储
+
+
+---
+
+- [x] ngaram
+- [ ] 测试用例
+
+---
+
+写入直接os.File写入，记录offset 不会涉及到mmap的页读取，所以直接根据write量记录offset
+
+初始化打开文件时，读取文件，设置offset即可
+
+读取通过mmap读取
+

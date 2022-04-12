@@ -63,6 +63,7 @@ func decodePostings() {
 
 // 编码
 // bytes.Buffer
+// TODO: marshal不对，需要遍历；还有
 func encodePostings(postings *PostingsList, docCount uint64) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer([]byte{})
 	p, err := json.Marshal(postings)
@@ -116,12 +117,11 @@ func (e *Engine) updatePostings(p *InvertedIndexValue) error {
 	if err != nil {
 		return fmt.Errorf("updatePostings encodePostings err: %v", err)
 	}
-	return storage.DBUpdatePostings(
-		e.invertedDB,
+	return e.invertedDB.DBUpdatePostings(
 		p.TokenID,
 		&storage.InvertedItem{
 			PostingsList: buf.Bytes(),
-			PostingsSize: uint64(buf.Len()),
+			PostingsLen:  uint64(buf.Len()),
 			DocCount:     p.docsCount})
 }
 
@@ -200,7 +200,8 @@ func (e *Engine) token2PostingsLists(
 	pl := new(PostingsList)
 	if bufInvert != nil {
 		pl = bufInvert.postingsList
-		// 这里的positioinCount和下面bufInvert的po
+		// 这里的positioinCount和下面bufInvert的positionCount是不一样的
+		// 这里统计的是同一个docid的position的个数
 		pl.positionCount++
 	} else {
 		if docID != 0 {
@@ -213,6 +214,7 @@ func (e *Engine) token2PostingsLists(
 	}
 	// 存储位置信息
 	pl.positions = append(pl.positions, position)
+	// 统计该token关联的所有doc的position的个数
 	bufInvert.positionCount++
 
 	return nil
