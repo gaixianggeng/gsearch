@@ -30,7 +30,7 @@ type InvertedIndexValue struct {
 	TokenID       uint64
 	postingsList  *PostingsList
 	docsCount     uint64
-	positionCount uint64
+	positionCount uint64 // 查询使用，写入的时候暂时用不到
 }
 
 // InvertedIndexHash 倒排hash

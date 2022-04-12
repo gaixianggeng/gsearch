@@ -49,6 +49,20 @@ func writeMMap() {
 		b[index] = bb
 	}
 
+	b, err = syscall.Mmap(
+		int(file.Fd()),
+		int64(os.Getpagesize()),
+		size,
+		syscall.PROT_WRITE|syscall.PROT_READ,
+		syscall.MAP_SHARED)
+	if err != nil {
+		panic(err)
+	}
+
+	for index, bb := range []byte("Hello world") {
+		b[index] = bb
+	}
+
 	err = syscall.Munmap(b)
 	if err != nil {
 		panic(err)

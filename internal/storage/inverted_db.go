@@ -11,19 +11,14 @@ import (
 type InvertedDB struct {
 	tree *bptree.Tree
 	file *os.File
-}
 
-// InvertedItem 写入库文件结构
-type InvertedItem struct {
-	PostingsList []byte
-	PostingsLen  uint64
-	DocCount     uint64
+	offset uint64
 }
 
 // DBUpdatePostings 倒排列表存储到数据库中
-func (t *InvertedDB) DBUpdatePostings(tokenID uint64, values *InvertedItem) error {
+func (t *InvertedDB) DBUpdatePostings(tokenID uint64, values []byte) error {
 	// 写入file
-	// t.file.Write( )
+	// t.file.Write(values)
 
 	// 获取file的offset
 
@@ -36,6 +31,10 @@ func (t *InvertedDB) DBUpdatePostings(tokenID uint64, values *InvertedItem) erro
 	return t.tree.Insert(tokenID, cByte)
 }
 
+func (t *InvertedDB) storagePostings(postings []byte) {
+
+}
+
 // NewInvertedDB 初始化
 func NewInvertedDB(bTreeName, postingsName string) *InvertedDB {
 	tree, err := bptree.NewTree(bTreeName)
@@ -46,5 +45,9 @@ func NewInvertedDB(bTreeName, postingsName string) *InvertedDB {
 	if err != nil {
 		panic(err)
 	}
-	return &InvertedDB{tree, f}
+	stat, err := f.Stat()
+	if err != nil {
+		panic(err)
+	}
+	return &InvertedDB{tree, f, uint64(stat.Size())}
 }

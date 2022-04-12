@@ -2,10 +2,8 @@ package index
 
 import (
 	"brain/internal/query"
-	"brain/internal/storage"
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 )
 
@@ -63,34 +61,30 @@ func decodePostings() {
 
 // 编码
 // bytes.Buffer
-// TODO: marshal不对，需要遍历；还有
-func encodePostings(postings *PostingsList, docCount uint64) (*bytes.Buffer, error) {
+// docCount暂时用不到
+func encodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer([]byte{})
-	p, err := json.Marshal(postings)
+	err := binaryWrite(buf, postingsLen)
 	if err != nil {
-		return buf, fmt.Errorf("encodePostings json.Marshal err::%v", err)
+		return nil, err
 	}
-	buf.Write(p)
-	binary.Write(buf, binary.BigEndian, docCount)
+	for postings != nil {
+		err := binaryWrite(buf, postings.DocID)
+		if err != nil {
+			return nil, err
+		}
+		err = binaryWrite(buf, postings.positionCount)
+		if err != nil {
+			return nil, err
+		}
+		err = binaryWrite(buf, postings.positions)
+		if err != nil {
+			return nil, err
+		}
+		postings = postings.next
+	}
+	// binary.Write(buf, binary.BigEndian, postingsLen)
 	return buf, nil
-
-	// static int encode_postings_none(
-	// const postings_list *postings,
-	// const int postings_len,
-	// buffer *postings_e) {
-	//     const postings_list *p;
-
-	//     LL_FOREACH(postings, p) {
-	//         int *pos = NULL;
-	//         append_buffer(postings_e, (void *)&p->document_id, sizeof(int));
-	//         append_buffer(postings_e, (void *)&p->positions_count, sizeof(int));
-	//         while ((pos = (int *)utarray_next(p->positions, pos))) {
-	//             append_buffer(postings_e, (void *)pos, sizeof(int));
-	//         }
-	//     }
-	//     return 0;
-	// }
-
 }
 
 func fetchPostings(tokenID uint64) (*PostingsList, uint64, error) {
@@ -117,12 +111,7 @@ func (e *Engine) updatePostings(p *InvertedIndexValue) error {
 	if err != nil {
 		return fmt.Errorf("updatePostings encodePostings err: %v", err)
 	}
-	return e.invertedDB.DBUpdatePostings(
-		p.TokenID,
-		&storage.InvertedItem{
-			PostingsList: buf.Bytes(),
-			PostingsLen:  uint64(buf.Len()),
-			DocCount:     p.docsCount})
+	return e.invertedDB.DBUpdatePostings(p.TokenID, buf.Bytes())
 }
 
 // /**
@@ -218,4 +207,13 @@ func (e *Engine) token2PostingsLists(
 	bufInvert.positionCount++
 
 	return nil
+}
+
+func binaryWrite(buf *bytes.Buffer, v any) error {
+	size := binary.Size(v)
+	fmt.Println("docid size:", size)
+	if size <= 0 {
+		return fmt.Errorf("encodePostings binary.Size err,size: %v", size)
+	}
+	return binary.Write(buf, binary.BigEndian, v)
 }
