@@ -5,13 +5,15 @@ import (
 	"os"
 	"syscall"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const maxMapSize = 0x1000000000
 const maxMmapStep = 1 << 30 // 1GB
 
 func TestPage(t *testing.T) {
-	fmt.Println("page:", os.Getpagesize())
+	log.Debug("page:", os.Getpagesize())
 	writeMMap()
 	// read()
 }
@@ -21,14 +23,14 @@ func writeMMap() {
 		panic(err)
 	}
 	defer file.Close()
-	fmt.Println(file.Fd())
+	log.Debug(file.Fd())
 	file.Fd()
 
 	stat, err := os.Stat("my.db")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("stat:", stat.Size())
+	log.Debug("stat:", stat.Size())
 	size, err := mmapSize(int(stat.Size()))
 	if err != nil {
 		panic(err)
@@ -119,16 +121,16 @@ func read() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(stat.Size())
+	log.Debug(stat.Size())
 
 	// b, err := syscall.Mmap(int(file.Fd()), 0, int(stat.Size()), syscall.PROT_READ, syscall.MAP_SHARED)
-	fmt.Println(int(file.Fd()))
-	fmt.Println(file.Fd())
+	log.Debug(int(file.Fd()))
+	log.Debug(file.Fd())
 	b, err := syscall.Mmap(int(file.Fd()), 0, 4, syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		panic(err)
 	}
 	defer syscall.Munmap(b)
-	fmt.Println(string(b))
-	fmt.Println(len(b))
+	log.Debug(string(b))
+	log.Debug(len(b))
 }

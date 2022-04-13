@@ -1,32 +1,33 @@
 package index
 
 import (
+	"brain/internal/storage"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 )
 
 // AddDocument 添加文档
-func (e *Engine) AddDocument(title, body []byte) error {
-	if len(title) > 0 || len(body) > 0 {
-		docID, err := e.forwardDB.Add(title, body)
+func (e *Engine) AddDocument(doc *storage.Document) error {
+	if doc.DocID > 0 && doc.Title != "" {
+		err := e.forwardDB.Add(doc)
 		if err != nil {
 			return fmt.Errorf("AddDocument err: %v", err)
 		}
-		fmt.Println(docID)
-		err = e.text2PostingsLists(docID, title)
+		log.Debug(doc.DocID)
+		err = e.text2PostingsLists(doc.DocID, []byte(doc.Title))
 		if err != nil {
 			return fmt.Errorf("text2postingslists err: %v", err)
 		}
 		e.bufCount++
-
 		e.indexCount++
 	}
 
-	// 落盘操作
-	if len(e.postingsHashBuf) > 0 && (e.bufCount > e.bufSize || title == nil) {
+	// 落盘操作 title = ""表示文件读取结束
+	if len(e.postingsHashBuf) > 0 && (e.bufCount > e.bufSize || doc.Title == "") {
 
 		for tokenID, invertedIndex := range e.postingsHashBuf {
 
-			fmt.Printf("tokenID:%d,invertedIndex:%v\n", tokenID, invertedIndex)
+			log.Debugf("tokenID:%d,invertedIndex:%v\n", tokenID, invertedIndex)
 			e.updatePostings(invertedIndex)
 		}
 
@@ -59,8 +60,9 @@ func createNewInvertedIndex(tokenID, docCount uint64) *InvertedIndexValue {
 }
 
 // NewIndexEngine init
-func NewIndexEngine() *Engine {
+func NewIndexEngine() (*Engine, error) {
 	return &Engine{
 		bufSize: 30,
-	}
+		N:       2,
+	}, nil
 }

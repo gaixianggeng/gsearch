@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const maxMapSize = 0x1000000000 // 64GB
@@ -101,17 +103,17 @@ func read() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(stat.Size())
+	log.Debug(stat.Size())
 
 	// b, err := syscall.Mmap(int(file.Fd()), 0, int(stat.Size()), syscall.PROT_READ, syscall.MAP_SHARED)
-	fmt.Println(int(file.Fd()))
-	fmt.Println(file.Fd())
+	log.Debug(int(file.Fd()))
+	log.Debug(file.Fd())
 	b, err := syscall.Mmap(int(file.Fd()), 0, 4, syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		panic(err)
 	}
 	defer syscall.Munmap(b)
 
-	fmt.Println(string(b))
-	fmt.Println(len(b))
+	log.Debug(string(b))
+	log.Debug(len(b))
 }

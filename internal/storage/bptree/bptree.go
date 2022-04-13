@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -972,7 +974,7 @@ func (t *Tree) deleteKeyFromNode(off OFFTYPE, key uint64) error {
 		return err
 	}
 	idx = getIndex(node.Keys, key)
-	fmt.Printf("delete key: %d from node: %d,keys:%v,idx:%d \n", key, off, node.Keys, idx)
+	log.Debugf("delete key: %d from node: %d,keys:%v,idx:%d \n", key, off, node.Keys, idx)
 	removeKeyFromNode(node, idx)
 
 	// update the last key of parent's if necessary
@@ -1252,7 +1254,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 			return err
 		}
 
-		fmt.Println("pre keys:", prevLeaf.Keys)
+		log.Debug("pre keys:", prevLeaf.Keys)
 
 		preOff := prevLeaf.Self
 
@@ -1264,7 +1266,7 @@ func (t *Tree) deleteKeyFromLeaf(key uint64) error {
 			return err
 		}
 
-		fmt.Println("pre keys:", pre.Keys)
+		log.Debug("pre keys:", pre.Keys)
 		// 更新前置节点的父节点的值
 		t.mayUpdatedLastParentKey(pre, len(pre.Keys)-1)
 
@@ -1299,7 +1301,7 @@ func (t *Tree) ScanTreePrint() error {
 		floor++
 
 		l := len(Q)
-		fmt.Printf("floor %3d:", floor)
+		log.Debugf("floor %3d:", floor)
 		for i := 0; i < l; i++ {
 			if curNode, err = t.newMappingNodeFromPool(Q[i]); err != nil {
 				return err
@@ -1308,9 +1310,9 @@ func (t *Tree) ScanTreePrint() error {
 
 			// print keys
 			if i == l-1 {
-				fmt.Printf("%d\n", curNode.Keys)
+				log.Debugf("%d\n", curNode.Keys)
 			} else {
-				fmt.Printf("%d, ", curNode.Keys)
+				log.Debugf("%d, ", curNode.Keys)
 			}
 			for _, v := range curNode.Children {
 				Q = append(Q, v)
@@ -1318,6 +1320,6 @@ func (t *Tree) ScanTreePrint() error {
 		}
 		Q = Q[l:]
 	}
-	fmt.Println(strings.Repeat("-", 50))
+	log.Debug(strings.Repeat("-", 50))
 	return nil
 }

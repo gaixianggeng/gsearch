@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 )
 
 // mergePostings merge two postings list
@@ -114,35 +115,6 @@ func (e *Engine) updatePostings(p *InvertedIndexValue) error {
 	return e.invertedDB.DBUpdatePostings(p.TokenID, buf.Bytes())
 }
 
-// /**
-//  * 将内存上（小倒排索引中）的倒排列表与存储器上的倒排列表合并后存储到数据库中
-//  * @param[in] env 存储着应用程序运行环境的结构体
-//  * @param[in] p 含有倒排列表的倒排索引中的索引项
-//  */
-// void update_postings(const wiser_env *env, inverted_index_value *p) {
-//     int old_postings_len;
-//     postings_list *old_postings;
-
-//     if (!fetch_postings(env, p->token_id, &old_postings, &old_postings_len)) {
-//         buffer *buf;
-//         if (old_postings_len) {
-//             p->postings_list = merge_postings(old_postings, p->postings_list);
-//             p->docs_count += old_postings_len;
-//         }
-//         if ((buf = alloc_buffer())) {
-//             encode_postings(env, p->postings_list, p->docs_count, buf);
-// 				// #define BUFFER_PTR(b) ((b)->head)              /* 返回指向缓冲区开头的指针 */
-//             db_update_postings(env, p->token_id, p->docs_count, BUFFER_PTR(buf), BUFFER_SIZE(buf));
-//             free_buffer(buf);
-//         }
-//     } else {
-//         print_error("cannot fetch old postings list of token(%d) for update.", p->token_id);
-//     }
-// }
-
-// int text_to_postings_lists(wiser_env* env, const int document_id, const UTF32Char* text, const unsigned int text_len,
-// const int n, inverted_index_hash** postings) {
-
 // text2PostingsLists --
 func (e *Engine) text2PostingsLists(docID uint64, text []byte) error {
 	tokens, err := query.Ngram(string(text), e.N)
@@ -173,6 +145,7 @@ func (e *Engine) token2PostingsLists(
 	position uint64, docID uint64) error {
 
 	bufInvert := new(InvertedIndexValue)
+	bufInvert.postingsList = new(PostingsList)
 
 	// doc_id用来标识写入数据还是查询数据
 	tokenID, docCount, err := e.tokenDB.GetTokenID(token, docID)
@@ -211,9 +184,9 @@ func (e *Engine) token2PostingsLists(
 
 func binaryWrite(buf *bytes.Buffer, v any) error {
 	size := binary.Size(v)
-	fmt.Println("docid size:", size)
+	log.Debug("docid size:", size)
 	if size <= 0 {
 		return fmt.Errorf("encodePostings binary.Size err,size: %v", size)
 	}
-	return binary.Write(buf, binary.BigEndian, v)
+	return binary.Write(buf, binary.LittleEndian, v)
 }

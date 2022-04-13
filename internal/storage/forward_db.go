@@ -5,9 +5,9 @@ type ForwardDB struct {
 }
 
 // Add 通过写入正排数据，获取docid
-func (d *ForwardDB) Add(title, body []byte) (uint64, error) {
+func (d *ForwardDB) Add(doc *Document) error {
 
-	return 0, nil
+	return nil
 }
 
 // /**

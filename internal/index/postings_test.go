@@ -2,7 +2,7 @@ package index
 
 import (
 	"encoding/binary"
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"reflect"
 	"testing"
 )
@@ -36,7 +36,7 @@ func Test_encodePostings(t *testing.T) {
 			got, err := encodePostings(tt.args.postings, tt.args.postingsLen)
 
 			a := make([]uint64, 4)
-			binary.Read(got, binary.BigEndian, &a)
+			binary.Read(got, binary.LittleEndian, &a)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("encodePostings() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -59,10 +59,10 @@ func TestPos(t *testing.T) {
 		return
 	}
 
-	fmt.Println(got.Len())
-	fmt.Println(string(got.Bytes()))
+	log.Debug(got.Len())
+	log.Debug(string(got.Bytes()))
 
 	a := make([]uint64, 4)
-	binary.Read(got, binary.BigEndian, &a)
-	fmt.Println(a)
+	binary.Read(got, binary.LittleEndian, &a)
+	log.Debug(a)
 }

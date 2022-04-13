@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"strings"
 )
 
@@ -16,8 +17,8 @@ func Ngram(content string, n int32) ([]Tokenization, error) {
 	if n < 1 {
 		return nil, fmt.Errorf("Ngram n must >= 1")
 	}
-	fmt.Println(len(content))
-	fmt.Println(len([]rune(content)))
+	log.Debug(len(content))
+	log.Debug(len([]rune(content)))
 	content = ignoredChar(content)
 	var token []Tokenization
 	if n >= int32(len([]rune(content))) {
@@ -27,7 +28,7 @@ func Ngram(content string, n int32) ([]Tokenization, error) {
 
 	i := int32(0)
 	num := len([]rune(content))
-	fmt.Println(num)
+	log.Debug(num)
 	for i = 0; i < int32(num); i++ {
 		t := []rune{}
 		if i+n > int32(num) {
@@ -36,7 +37,7 @@ func Ngram(content string, n int32) ([]Tokenization, error) {
 		} else {
 			t = []rune(content)[i : i+n]
 		}
-		fmt.Println(string(t))
+		log.Debug(string(t))
 		token = append(token, Tokenization{
 			Token:    t,
 			Position: uint64(i),
@@ -56,6 +57,6 @@ func ignoredChar(str string) string {
 
 		}
 	}
-	fmt.Println(str)
+	log.Debug(str)
 	return str
 }
