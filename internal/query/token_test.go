@@ -41,9 +41,9 @@ func TestNgram(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{"test1", args{"北京北京", 2}, []Tokenization{
-			{[]rune("北京"), 0},
-			{[]rune("京北"), 1},
-			{[]rune("北京"), 2}}, false},
+			{("北京"), 0},
+			{("京北"), 1},
+			{("北京"), 2}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -2,13 +2,14 @@ package query
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Tokenization  分词返回结构
 type Tokenization struct {
-	Token    []rune
+	Token    string
 	Position uint64
 }
 
@@ -17,18 +18,15 @@ func Ngram(content string, n int32) ([]Tokenization, error) {
 	if n < 1 {
 		return nil, fmt.Errorf("Ngram n must >= 1")
 	}
-	log.Debug(len(content))
-	log.Debug(len([]rune(content)))
 	content = ignoredChar(content)
 	var token []Tokenization
 	if n >= int32(len([]rune(content))) {
-		token = append(token, Tokenization{[]rune(content), 0})
+		token = append(token, Tokenization{content, 0})
 		return token, nil
 	}
 
 	i := int32(0)
 	num := len([]rune(content))
-	log.Debug(num)
 	for i = 0; i < int32(num); i++ {
 		t := []rune{}
 		if i+n > int32(num) {
@@ -37,9 +35,9 @@ func Ngram(content string, n int32) ([]Tokenization, error) {
 		} else {
 			t = []rune(content)[i : i+n]
 		}
-		log.Debug(string(t))
+		log.Infof("tokens: %v", string(t))
 		token = append(token, Tokenization{
-			Token:    t,
+			Token:    string(t),
 			Position: uint64(i),
 		})
 	}

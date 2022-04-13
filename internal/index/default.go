@@ -27,11 +27,11 @@ type PostingsList struct {
 
 //InvertedIndexValue 倒排索引
 type InvertedIndexValue struct {
-	TokenID       uint64
+	Token         string
 	postingsList  *PostingsList
 	docsCount     uint64
 	positionCount uint64 // 查询使用，写入的时候暂时用不到
 }
 
 // InvertedIndexHash 倒排hash
-type InvertedIndexHash map[uint64]*InvertedIndexValue
+type InvertedIndexHash map[string]*InvertedIndexValue

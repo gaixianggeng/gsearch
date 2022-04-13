@@ -3,6 +3,7 @@ package index
 import (
 	"brain/internal/storage"
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -13,7 +14,6 @@ func (e *Engine) AddDocument(doc *storage.Document) error {
 		if err != nil {
 			return fmt.Errorf("AddDocument err: %v", err)
 		}
-		log.Debug(doc.DocID)
 		err = e.text2PostingsLists(doc.DocID, []byte(doc.Title))
 		if err != nil {
 			return fmt.Errorf("text2postingslists err: %v", err)
@@ -50,10 +50,10 @@ func createNewPostingsList(docID uint64) *PostingsList {
 }
 
 // 创建倒排索引
-func createNewInvertedIndex(tokenID, docCount uint64) *InvertedIndexValue {
+func createNewInvertedIndex(token string, docCount uint64) *InvertedIndexValue {
 	p := new(InvertedIndexValue)
 	p.docsCount = docCount
-	p.TokenID = tokenID
+	p.Token = token
 	p.positionCount = 0
 	p.postingsList = new(PostingsList)
 	return p

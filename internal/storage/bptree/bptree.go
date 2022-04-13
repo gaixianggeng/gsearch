@@ -1301,7 +1301,7 @@ func (t *Tree) ScanTreePrint() error {
 		floor++
 
 		l := len(Q)
-		log.Debugf("floor %3d:", floor)
+		fmt.Printf("floor %3d:", floor)
 		for i := 0; i < l; i++ {
 			if curNode, err = t.newMappingNodeFromPool(Q[i]); err != nil {
 				return err
@@ -1310,9 +1310,9 @@ func (t *Tree) ScanTreePrint() error {
 
 			// print keys
 			if i == l-1 {
-				log.Debugf("%d\n", curNode.Keys)
+				fmt.Printf("%d\n", curNode.Keys)
 			} else {
-				log.Debugf("%d, ", curNode.Keys)
+				fmt.Printf("%d, ", curNode.Keys)
 			}
 			for _, v := range curNode.Children {
 				Q = append(Q, v)

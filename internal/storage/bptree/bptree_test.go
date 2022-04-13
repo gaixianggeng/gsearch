@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"os"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func TestBptree(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
 	var (
 		tree *Tree
 		err  error

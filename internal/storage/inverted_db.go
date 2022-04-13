@@ -18,7 +18,7 @@ type InvertedDB struct {
 }
 
 // DBUpdatePostings 倒排列表存储到数据库中
-func (t *InvertedDB) DBUpdatePostings(tokenID uint64, values []byte) error {
+func (t *InvertedDB) DBUpdatePostings(token string, values []byte) error {
 	// 写入file
 	size, err := t.storagePostings(values)
 	if err != nil {
@@ -35,7 +35,7 @@ func (t *InvertedDB) DBUpdatePostings(tokenID uint64, values []byte) error {
 	//update offset
 	t.offset += size
 
-	return t.tree.Insert(tokenID, value)
+	return t.tree.Insert(token, value)
 }
 
 func (t *InvertedDB) storagePostings(postings []byte) (uint64, error) {

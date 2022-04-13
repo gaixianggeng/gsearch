@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// 入口
 func run() {
 	engine, err := index.NewIndexEngine()
 	if err != nil {

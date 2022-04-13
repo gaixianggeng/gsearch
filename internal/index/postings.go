@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -88,7 +89,7 @@ func encodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, 
 	return buf, nil
 }
 
-func fetchPostings(tokenID uint64) (*PostingsList, uint64, error) {
+func fetchPostings(token string) (*PostingsList, uint64, error) {
 
 	return nil, 0, nil
 }
@@ -98,7 +99,7 @@ func (e *Engine) updatePostings(p *InvertedIndexValue) error {
 		return fmt.Errorf("updatePostings p is nil")
 	}
 	// 拉取数据库数据
-	oldPostings, size, err := fetchPostings(p.TokenID)
+	oldPostings, size, err := fetchPostings(p.Token)
 	if err != nil {
 		return fmt.Errorf("updatePostings fetchPostings err: %v", err)
 	}
@@ -112,7 +113,7 @@ func (e *Engine) updatePostings(p *InvertedIndexValue) error {
 	if err != nil {
 		return fmt.Errorf("updatePostings encodePostings err: %v", err)
 	}
-	return e.invertedDB.DBUpdatePostings(p.TokenID, buf.Bytes())
+	return e.invertedDB.DBUpdatePostings(p.Token, buf.Bytes())
 }
 
 // text2PostingsLists --
@@ -140,37 +141,39 @@ func (e *Engine) text2PostingsLists(docID uint64, text []byte) error {
 
 }
 
-func (e *Engine) token2PostingsLists(
-	bufInvertHash InvertedIndexHash, token []rune,
+func (e *Engine) token2PostingsLists(bufInvertHash InvertedIndexHash, token string,
 	position uint64, docID uint64) error {
 
+	// init
 	bufInvert := new(InvertedIndexValue)
-	bufInvert.postingsList = new(PostingsList)
 
 	// doc_id用来标识写入数据还是查询数据
-	tokenID, docCount, err := e.tokenDB.GetTokenID(token, docID)
+	docCount, err := e.tokenDB.GetToken(token, docID)
 	if err != nil {
 		return fmt.Errorf("token2PostingsLists GetTokenID err: %v", err)
 	}
 
 	if len(bufInvertHash) > 0 {
-		if item, ok := bufInvertHash[tokenID]; ok {
+		if item, ok := bufInvertHash[token]; ok {
 			bufInvert = item
 		}
 	}
 
 	pl := new(PostingsList)
-	if bufInvert != nil {
+	if bufInvert != nil && bufInvert.postingsList != nil {
+		log.Debug("token2PostingsLists bufInvert.postingsList is not nil")
 		pl = bufInvert.postingsList
 		// 这里的positioinCount和下面bufInvert的positionCount是不一样的
 		// 这里统计的是同一个docid的position的个数
 		pl.positionCount++
 	} else {
+
+		log.Debug("token2PostingsLists bufInvert.postingsList is nil")
 		if docID != 0 {
 			docCount = 1
 		}
-		bufInvert = createNewInvertedIndex(tokenID, docCount)
-		bufInvertHash[tokenID] = bufInvert
+		bufInvert = createNewInvertedIndex(token, docCount)
+		bufInvertHash[token] = bufInvert
 		pl = createNewPostingsList(docID)
 		bufInvert.postingsList = pl
 	}
