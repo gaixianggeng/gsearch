@@ -10,11 +10,9 @@ import (
 // AddDocument 添加文档
 func (e *Engine) AddDocument(doc *storage.Document) error {
 	if doc.DocID > 0 && doc.Title != "" {
-		err := e.forwardDB.Add(doc)
-		if err != nil {
-			return fmt.Errorf("AddDocument err: %v", err)
-		}
-		err = e.text2PostingsLists(doc.DocID, []byte(doc.Title))
+		// err := e.forwardDB.Add(doc)
+
+		err := e.text2PostingsLists(doc.DocID, (doc.Title))
 		if err != nil {
 			return fmt.Errorf("text2postingslists err: %v", err)
 		}
@@ -22,12 +20,14 @@ func (e *Engine) AddDocument(doc *storage.Document) error {
 		e.indexCount++
 	}
 
+	log.Debugf("start storage...%v", e.postingsHashBuf)
+
 	// 落盘操作 title = ""表示文件读取结束
 	if len(e.postingsHashBuf) > 0 && (e.bufCount > e.bufSize || doc.Title == "") {
 
-		for tokenID, invertedIndex := range e.postingsHashBuf {
+		for token, invertedIndex := range e.postingsHashBuf {
 
-			log.Debugf("tokenID:%d,invertedIndex:%v\n", tokenID, invertedIndex)
+			log.Debugf("token:%d,invertedIndex:%v\n", token, invertedIndex)
 			e.updatePostings(invertedIndex)
 		}
 
@@ -60,9 +60,12 @@ func createNewInvertedIndex(token string, docCount uint64) *InvertedIndexValue {
 }
 
 // NewIndexEngine init
-func NewIndexEngine() (*Engine, error) {
+func NewIndexEngine(termDB, forwardDB string) (*Engine, error) {
+	invertedDB := storage.NewInvertedDB(
+		termDB, forwardDB)
 	return &Engine{
-		bufSize: 30,
-		N:       2,
+		invertedDB: invertedDB,
+		bufSize:    30,
+		N:          2,
 	}, nil
 }

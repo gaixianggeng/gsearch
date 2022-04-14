@@ -11,9 +11,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	termDB    = "../../data/term.db"
+	forwardDB = "../../data/forward.db"
+)
+
 // 入口
 func run() {
-	engine, err := index.NewIndexEngine()
+	engine, err := index.NewIndexEngine(termDB, forwardDB)
 	if err != nil {
 		panic(err)
 	}
@@ -27,7 +32,7 @@ func addDoc(engine *index.Engine) {
 		doc, err := doc2Struct(item)
 		if err != nil {
 			log.Errorf("doc2Struct err: %v", err)
-			break
+			doc = new(storage.Document)
 		}
 		err = engine.AddDocument(doc)
 		if err != nil {

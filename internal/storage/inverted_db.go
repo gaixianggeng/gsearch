@@ -1,19 +1,19 @@
 package storage
 
 import (
-	"brain/internal/storage/bptree"
 	"encoding/binary"
 	"fmt"
 	"os"
 
+	"github.com/boltdb/bolt"
 	log "github.com/sirupsen/logrus"
 )
 
 // InvertedDB 倒排索引存储库
 type InvertedDB struct {
-	tree *bptree.Tree
-	file *os.File
-
+	// tree *bptree.Tree
+	file   *os.File
+	db     *bolt.DB
 	offset uint64
 }
 
@@ -35,10 +35,23 @@ func (t *InvertedDB) DBUpdatePostings(token string, values []byte) error {
 	//update offset
 	t.offset += size
 
-	return t.tree.Insert(token, value)
+	return t.Put([]byte(token), value)
+}
+
+// Put 插入term
+func (t *InvertedDB) Put(key, value []byte) error {
+
+	return nil
+}
+
+// Get 通过term获取value
+func (t *InvertedDB) Get(key []byte) (value []byte, err error) {
+
+	return nil, nil
 }
 
 func (t *InvertedDB) storagePostings(postings []byte) (uint64, error) {
+	log.Debugf("postings len:%d", len(postings))
 	size, err := t.file.Write(postings)
 	if err != nil {
 		return 0, fmt.Errorf("write storage postings err:%v", err)
@@ -47,19 +60,31 @@ func (t *InvertedDB) storagePostings(postings []byte) (uint64, error) {
 
 }
 
+// Close 关闭
+func (t *InvertedDB) Close() {
+	t.file.Close()
+	t.db.Close()
+}
+
 // NewInvertedDB 初始化
-func NewInvertedDB(bTreeName, postingsName string) *InvertedDB {
-	tree, err := bptree.NewTree(bTreeName)
-	if err != nil {
-		panic(err)
-	}
+func NewInvertedDB(termName, postingsName string) *InvertedDB {
+	// tree, err := bptree.NewTree(bTreeName)
+	// if err != nil {
+	// 	panic(err)
+	// }
 	f, err := os.OpenFile(postingsName, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	stat, err := f.Stat()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	return &InvertedDB{tree, f, uint64(stat.Size())}
+
+	db, err := bolt.Open(termName, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &InvertedDB{f, db, uint64(stat.Size())}
 }

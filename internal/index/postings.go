@@ -117,7 +117,7 @@ func (e *Engine) updatePostings(p *InvertedIndexValue) error {
 }
 
 // text2PostingsLists --
-func (e *Engine) text2PostingsLists(docID uint64, text []byte) error {
+func (e *Engine) text2PostingsLists(docID uint64, text string) error {
 	tokens, err := query.Ngram(string(text), e.N)
 	if err != nil {
 		return fmt.Errorf("text2PostingsLists Ngram err: %v", err)
@@ -130,6 +130,7 @@ func (e *Engine) text2PostingsLists(docID uint64, text []byte) error {
 			return fmt.Errorf("text2PostingsLists token2PostingsLists err: %v", err)
 		}
 	}
+	log.Debugf("bufInvertedHash:%v", bufInvertedHash)
 
 	if e.postingsHashBuf != nil && len(e.postingsHashBuf) > 0 {
 		mergeInvertedIndex(e.postingsHashBuf, bufInvertedHash)
@@ -167,7 +168,6 @@ func (e *Engine) token2PostingsLists(bufInvertHash InvertedIndexHash, token stri
 		// 这里统计的是同一个docid的position的个数
 		pl.positionCount++
 	} else {
-
 		log.Debug("token2PostingsLists bufInvert.postingsList is nil")
 		if docID != 0 {
 			docCount = 1
