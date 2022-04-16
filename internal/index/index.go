@@ -20,14 +20,14 @@ func (e *Engine) AddDocument(doc *storage.Document) error {
 		e.indexCount++
 	}
 
-	log.Debugf("start storage...%v", e.postingsHashBuf)
+	log.Debugf("start storage...%v,len:%d", e.postingsHashBuf, len(e.postingsHashBuf))
 
 	// 落盘操作 title = ""表示文件读取结束
 	if len(e.postingsHashBuf) > 0 && (e.bufCount > e.bufSize || doc.Title == "") {
 
 		for token, invertedIndex := range e.postingsHashBuf {
 
-			log.Debugf("token:%d,invertedIndex:%v\n", token, invertedIndex)
+			log.Debugf("token:%s,invertedIndex:%v\n", token, invertedIndex)
 			e.updatePostings(invertedIndex)
 		}
 
@@ -65,7 +65,7 @@ func NewIndexEngine(termDB, forwardDB string) (*Engine, error) {
 		termDB, forwardDB)
 	return &Engine{
 		invertedDB: invertedDB,
-		bufSize:    30,
+		bufSize:    1,
 		N:          2,
 	}, nil
 }

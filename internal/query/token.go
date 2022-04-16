@@ -35,7 +35,6 @@ func Ngram(content string, n int32) ([]Tokenization, error) {
 		} else {
 			t = []rune(content)[i : i+n]
 		}
-		log.Infof("tokens: %v", string(t))
 		token = append(token, Tokenization{
 			Token:    string(t),
 			Position: uint64(i),

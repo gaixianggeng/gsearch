@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	termDB    = "../../data/term.db"
-	forwardDB = "../../data/forward.db"
+	termDB     = "../data/term.db"
+	forwardDB  = "../data/forward.db"
+	sourceFile = "../data/source.csv"
 )
 
 // 入口
@@ -26,7 +27,7 @@ func run() {
 }
 
 func addDoc(engine *index.Engine) {
-	docList := readFile("../../data/source.csv")
+	docList := readFile(sourceFile)
 	for _, item := range docList {
 		log.Debug(item)
 		doc, err := doc2Struct(item)

@@ -43,11 +43,13 @@ func mergePostings(pa, pb *PostingsList) *PostingsList {
 
 // mergeInvertedIndex 合并两个倒排索引
 func mergeInvertedIndex(base, toBeAdded InvertedIndexHash) {
-	for tokenID, index := range base {
-		if toBeAddedIndex, ok := (toBeAdded)[tokenID]; ok {
+	for token, index := range base {
+		if toBeAddedIndex, ok := (toBeAdded)[token]; ok {
+			log.Debug("mergeInvertedIndex tokenID:", token)
+			// 不需要+=positionCount 查询时候用到的字段，不需要写入到倒排表中
 			index.postingsList = mergePostings(index.postingsList, toBeAddedIndex.postingsList)
 			index.docsCount += toBeAddedIndex.docsCount
-			delete(toBeAdded, tokenID)
+			delete(toBeAdded, token)
 		}
 	}
 	for tokenID, index := range toBeAdded {
@@ -70,7 +72,10 @@ func encodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, 
 	if err != nil {
 		return nil, err
 	}
+
+	log.Debug(len(buf.Bytes()))
 	for postings != nil {
+		log.Debugf("docid:%d,count:%d,positions:%v", postings.DocID, postings.positionCount, postings.positions)
 		err := binaryWrite(buf, postings.DocID)
 		if err != nil {
 			return nil, err
@@ -85,7 +90,7 @@ func encodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, 
 		}
 		postings = postings.next
 	}
-	// binary.Write(buf, binary.BigEndian, postingsLen)
+	log.Debug(len(buf.Bytes()))
 	return buf, nil
 }
 
@@ -133,6 +138,7 @@ func (e *Engine) text2PostingsLists(docID uint64, text string) error {
 	log.Debugf("bufInvertedHash:%v", bufInvertedHash)
 
 	if e.postingsHashBuf != nil && len(e.postingsHashBuf) > 0 {
+		log.Debug("mergeInvertedIndex-----")
 		mergeInvertedIndex(e.postingsHashBuf, bufInvertedHash)
 	} else {
 		e.postingsHashBuf = make(InvertedIndexHash)
@@ -162,13 +168,13 @@ func (e *Engine) token2PostingsLists(bufInvertHash InvertedIndexHash, token stri
 
 	pl := new(PostingsList)
 	if bufInvert != nil && bufInvert.postingsList != nil {
-		log.Debug("token2PostingsLists bufInvert.postingsList is not nil")
+		log.Debug("bufInvert.postingsList is not nil")
 		pl = bufInvert.postingsList
 		// 这里的positioinCount和下面bufInvert的positionCount是不一样的
 		// 这里统计的是同一个docid的position的个数
 		pl.positionCount++
 	} else {
-		log.Debug("token2PostingsLists bufInvert.postingsList is nil")
+		log.Debug("bufInvert.postingsList is nil")
 		if docID != 0 {
 			docCount = 1
 		}
@@ -187,7 +193,7 @@ func (e *Engine) token2PostingsLists(bufInvertHash InvertedIndexHash, token stri
 
 func binaryWrite(buf *bytes.Buffer, v any) error {
 	size := binary.Size(v)
-	log.Debug("docid size:", size)
+	// log.Debug("docid size:", size)
 	if size <= 0 {
 		return fmt.Errorf("encodePostings binary.Size err,size: %v", size)
 	}

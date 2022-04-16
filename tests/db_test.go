@@ -10,11 +10,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func TestWrite(t *testing.T) {
+func TestReadDB(t *testing.T) {
 	c, _ := os.ReadFile("../data/forward.db")
 	log.Debug(len(c))
 	buf := bytes.NewBuffer(c)
-	a := make([]uint64, 21)
+	a := make([]uint64, len(c)/8)
 	binary.Read(buf, binary.LittleEndian, &a)
 	log.Debug(a)
 }

@@ -25,6 +25,8 @@ func (t *InvertedDB) DBUpdatePostings(token string, values []byte) error {
 		return fmt.Errorf("DBUpdatePostings storagePostings err: %v", err)
 	}
 
+	return nil
+
 	// 获取file的offset
 
 	// 写入b+tree
