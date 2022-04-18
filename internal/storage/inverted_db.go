@@ -19,19 +19,16 @@ type InvertedDB struct {
 
 // DBUpdatePostings 倒排列表存储到数据库中
 func (t *InvertedDB) DBUpdatePostings(token string, values []byte) error {
-	// 写入file
+	// 写入file，获取写入的size
 	size, err := t.storagePostings(values)
 	if err != nil {
 		return fmt.Errorf("DBUpdatePostings storagePostings err: %v", err)
 	}
 
-	return nil
-
-	// 获取file的offset
-
 	// 写入b+tree
-	value := make([]byte, 8)
+	value := make([]byte, 16)
 	binary.LittleEndian.PutUint64(value, t.offset)
+	binary.LittleEndian.PutUint64(value, size)
 	log.Debug(string(value))
 
 	//update offset
