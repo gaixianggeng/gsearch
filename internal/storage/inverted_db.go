@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"github.com/boltdb/bolt"
 	log "github.com/sirupsen/logrus"
 )
+
+const termBucket = "term"
 
 // InvertedDB 倒排索引存储库
 type InvertedDB struct {
@@ -26,32 +29,36 @@ func (t *InvertedDB) DBUpdatePostings(token string, values []byte) error {
 	}
 
 	// 写入b+tree
-	value := make([]byte, 16)
-	binary.LittleEndian.PutUint64(value, t.offset)
-	binary.LittleEndian.PutUint64(value, size)
-	log.Debug(string(value))
+	buf := bytes.NewBuffer(nil)
+	log.Debugf("offset:%d, size:%d", t.offset, size)
+	binary.Write(buf, binary.LittleEndian, t.offset)
+	binary.Write(buf, binary.LittleEndian, size)
 
 	//update offset
 	t.offset += size
 
-	return t.Put([]byte(token), value)
+	return t.Put([]byte(token), buf.Bytes())
 }
 
 // Put 插入term
 func (t *InvertedDB) Put(key, value []byte) error {
-
-	return nil
+	return Put(t.db, termBucket, key, value)
 }
 
 // Get 通过term获取value
 func (t *InvertedDB) Get(key []byte) (value []byte, err error) {
+	return Get(t.db, termBucket, key)
+}
 
-	return nil, nil
+// GetTokenCount -- ?查询的时候用到
+func (t *InvertedDB) GetTokenCount(token string, docID uint64) (uint64, error) {
+	return 0, nil
+
 }
 
 func (t *InvertedDB) storagePostings(postings []byte) (uint64, error) {
 	log.Debugf("postings len:%d", len(postings))
-	size, err := t.file.Write(postings)
+	size, err := t.file.WriteAt(postings, int64(t.offset))
 	if err != nil {
 		return 0, fmt.Errorf("write storage postings err:%v", err)
 	}
@@ -61,6 +68,8 @@ func (t *InvertedDB) storagePostings(postings []byte) (uint64, error) {
 
 // Close 关闭
 func (t *InvertedDB) Close() {
+	stat, _ := t.file.Stat()
+	log.Debugf("close,offset:%d,file size:%d", t.offset, stat.Size())
 	t.file.Close()
 	t.db.Close()
 }
@@ -84,6 +93,6 @@ func NewInvertedDB(termName, postingsName string) *InvertedDB {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	log.Debugf("file size:%d", stat.Size())
 	return &InvertedDB{f, db, uint64(stat.Size())}
 }

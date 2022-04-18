@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"brain/internal/storage"
 	"bytes"
 	"encoding/binary"
 	"os"
@@ -19,28 +20,44 @@ func TestReadDB(t *testing.T) {
 	log.Debug(a)
 }
 func TestBucket_Get_FromNode(t *testing.T) {
-	db := MustOpenDB()
-	defer db.MustClose()
-	log.Debug(db.Path())
 
-	if err := db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucket([]byte("widgets"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := b.Put([]byte("foo"), []byte("bar")); err != nil {
-			t.Fatal(err)
-		}
-		if v := b.Get([]byte("foo")); !bytes.Equal(v, []byte("bar")) {
-			t.Fatalf("unexpected value: %v", v)
-		}
-		return nil
-	}); err != nil {
-		t.Fatal(err)
+	termName := "../data/term.db"
+	db, err := bolt.Open(termName, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	b, err := storage.Get(db, "term", []byte("据数"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	buf := bytes.NewBuffer(b)
+	a := make([]uint64, 2)
+	binary.Read(buf, binary.LittleEndian, &a)
+	log.Debugf("%v", a)
+}
+
+func TestGetForward(t *testing.T) {
+
+	termName := "../data/forward.db"
+	db, err := bolt.Open(termName, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	b, err := storage.Get(db, "forward", []byte("56291828"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	buf := bytes.NewBuffer(b)
+	a := make([]byte, len(b))
+	binary.Read(buf, binary.LittleEndian, &a)
+	log.Debugf("%s", a)
 }
 
 func init() {
 	log.SetLevel(log.DebugLevel)
-
+	log.SetReportCaller(true)
 }

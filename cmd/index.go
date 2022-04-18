@@ -13,16 +13,18 @@ import (
 
 const (
 	termDB     = "../data/term.db"
+	invertedDB = "../data/inverted.db"
 	forwardDB  = "../data/forward.db"
 	sourceFile = "../data/source.csv"
 )
 
 // 入口
 func run() {
-	engine, err := index.NewIndexEngine(termDB, forwardDB)
+	engine, err := index.NewIndexEngine(termDB, invertedDB, forwardDB)
 	if err != nil {
 		panic(err)
 	}
+	defer engine.Close()
 	addDoc(engine)
 }
 

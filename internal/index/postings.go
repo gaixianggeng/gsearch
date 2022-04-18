@@ -118,7 +118,7 @@ func (e *Engine) updatePostings(p *InvertedIndexValue) error {
 	if err != nil {
 		return fmt.Errorf("updatePostings encodePostings err: %v", err)
 	}
-	return e.invertedDB.DBUpdatePostings(p.Token, buf.Bytes())
+	return e.InvertedDB.DBUpdatePostings(p.Token, buf.Bytes())
 }
 
 // text2PostingsLists --
@@ -155,7 +155,8 @@ func (e *Engine) token2PostingsLists(bufInvertHash InvertedIndexHash, token stri
 	bufInvert := new(InvertedIndexValue)
 
 	// doc_id用来标识写入数据还是查询数据
-	docCount, err := e.tokenDB.GetToken(token, docID)
+	// ?? docCount 应该是用于查询
+	docCount, err := e.InvertedDB.GetTokenCount(token, docID)
 	if err != nil {
 		return fmt.Errorf("token2PostingsLists GetTokenID err: %v", err)
 	}

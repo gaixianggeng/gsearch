@@ -6,9 +6,8 @@ import (
 
 // Engine 写入引擎
 type Engine struct {
-	forwardDB  *storage.ForwardDB
-	invertedDB *storage.InvertedDB
-	tokenDB    *storage.TokenDB
+	ForwardDB  *storage.ForwardDB
+	InvertedDB *storage.InvertedDB
 
 	postingsHashBuf InvertedIndexHash // 倒排索引缓冲区
 	bufCount        uint64            //倒排索引缓冲区的文档数

@@ -1,13 +1,45 @@
 package storage
 
+import (
+	"encoding/json"
+	"strconv"
+
+	"github.com/boltdb/bolt"
+	log "github.com/sirupsen/logrus"
+)
+
+const bucketName = "forward"
+
 // ForwardDB 存储器
 type ForwardDB struct {
+	db *bolt.DB
 }
 
-// Add 通过写入正排数据，获取docid
-func (d *ForwardDB) Add(doc *Document) error {
+// Add add forward data
+func (f *ForwardDB) Add(doc *Document) error {
+	key := strconv.Itoa(int(doc.DocID))
+	body, _ := json.Marshal(doc)
+	return Put(f.db, bucketName, []byte(key), body)
+}
 
-	return nil
+// Get get forward data
+func (f *ForwardDB) Get(docID uint64) ([]byte, error) {
+	key := strconv.Itoa(int(docID))
+	return Get(f.db, bucketName, []byte(key))
+}
+
+// Close --
+func (f *ForwardDB) Close() {
+	f.db.Close()
+}
+
+// NewForwardDB --
+func NewForwardDB(dbName string) *ForwardDB {
+	db, err := bolt.Open(dbName, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &ForwardDB{db}
 }
 
 // /**

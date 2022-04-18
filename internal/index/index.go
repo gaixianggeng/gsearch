@@ -10,9 +10,11 @@ import (
 // AddDocument 添加文档
 func (e *Engine) AddDocument(doc *storage.Document) error {
 	if doc.DocID > 0 && doc.Title != "" {
-		// err := e.forwardDB.Add(doc)
-
-		err := e.text2PostingsLists(doc.DocID, (doc.Title))
+		err := e.ForwardDB.Add(doc)
+		if err != nil {
+			return fmt.Errorf("forward doc add err: %v", err)
+		}
+		err = e.text2PostingsLists(doc.DocID, (doc.Title))
 		if err != nil {
 			return fmt.Errorf("text2postingslists err: %v", err)
 		}
@@ -28,7 +30,11 @@ func (e *Engine) AddDocument(doc *storage.Document) error {
 		for token, invertedIndex := range e.postingsHashBuf {
 
 			log.Debugf("token:%s,invertedIndex:%v\n", token, invertedIndex)
-			e.updatePostings(invertedIndex)
+			err := e.updatePostings(invertedIndex)
+			if err != nil {
+				log.Errorf("updatePostings err: %v", err)
+				return fmt.Errorf("updatePostings err: %v", err)
+			}
 		}
 
 		// 重置
@@ -38,6 +44,12 @@ func (e *Engine) AddDocument(doc *storage.Document) error {
 
 	return nil
 
+}
+
+// Close --
+func (e *Engine) Close() {
+	e.InvertedDB.Close()
+	e.ForwardDB.Close()
 }
 
 // 创建倒排列表
@@ -60,11 +72,14 @@ func createNewInvertedIndex(token string, docCount uint64) *InvertedIndexValue {
 }
 
 // NewIndexEngine init
-func NewIndexEngine(termDB, forwardDB string) (*Engine, error) {
-	invertedDB := storage.NewInvertedDB(
-		termDB, forwardDB)
+func NewIndexEngine(termDB, invertedDB, forwardDB string) (*Engine, error) {
+	inverted := storage.NewInvertedDB(
+		termDB, invertedDB)
+	forward := storage.NewForwardDB(forwardDB)
+
 	return &Engine{
-		invertedDB: invertedDB,
+		InvertedDB: inverted,
+		ForwardDB:  forward,
 		bufSize:    1,
 		N:          2,
 	}, nil
