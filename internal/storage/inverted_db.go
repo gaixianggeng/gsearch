@@ -52,6 +52,11 @@ func (t *InvertedDB) Get(key []byte) (value []byte, err error) {
 
 // GetTokenCount -- ?查询的时候用到
 func (t *InvertedDB) GetTokenCount(token string, docID uint64) (uint64, error) {
+	// c, err := Get(t.db, termBucket, []byte(token))
+	// if err != nil {
+	// 	return 0, fmt.Errorf("GetTokenCount Get err: %v", err)
+	// }
+
 	return 0, nil
 
 }

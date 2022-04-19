@@ -1,36 +1,42 @@
 package index
 
 import (
+	"brain/internal/engine"
 	"brain/internal/storage"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )
 
+// Index --
+type Index struct {
+	*engine.Engine
+}
+
 // AddDocument 添加文档
-func (e *Engine) AddDocument(doc *storage.Document) error {
+func (in *Index) AddDocument(doc *storage.Document) error {
 	if doc.DocID > 0 && doc.Title != "" {
-		err := e.ForwardDB.Add(doc)
+		err := in.ForwardDB.Add(doc)
 		if err != nil {
 			return fmt.Errorf("forward doc add err: %v", err)
 		}
-		err = e.text2PostingsLists(doc.DocID, (doc.Title))
+		err = in.Text2PostingsLists(doc.Title, doc.DocID)
 		if err != nil {
 			return fmt.Errorf("text2postingslists err: %v", err)
 		}
-		e.bufCount++
-		e.indexCount++
+		in.BufCount++
+		in.IndexCount++
 	}
 
-	log.Debugf("start storage...%v,len:%d", e.postingsHashBuf, len(e.postingsHashBuf))
+	log.Debugf("start storage...%v,len:%d", in.PostingsHashBuf, len(in.PostingsHashBuf))
 
 	// 落盘操作 title = ""表示文件读取结束
-	if len(e.postingsHashBuf) > 0 && (e.bufCount > e.bufSize || doc.Title == "") {
+	if len(in.PostingsHashBuf) > 0 && (in.BufCount > in.BufSize || doc.Title == "") {
 
-		for token, invertedIndex := range e.postingsHashBuf {
+		for token, invertedIndex := range in.PostingsHashBuf {
 
 			log.Debugf("token:%s,invertedIndex:%v\n", token, invertedIndex)
-			err := e.updatePostings(invertedIndex)
+			err := in.updatePostings(invertedIndex)
 			if err != nil {
 				log.Errorf("updatePostings err: %v", err)
 				return fmt.Errorf("updatePostings err: %v", err)
@@ -38,49 +44,46 @@ func (e *Engine) AddDocument(doc *storage.Document) error {
 		}
 
 		// 重置
-		e.postingsHashBuf = make(InvertedIndexHash)
-		e.bufCount = 0
+		in.PostingsHashBuf = make(engine.InvertedIndexHash)
+		in.BufCount = 0
 	}
 
 	return nil
 
 }
 
+func (in *Index) updatePostings(p *engine.InvertedIndexValue) error {
+	if p == nil {
+		return fmt.Errorf("updatePostings p is nil")
+	}
+	// 拉取数据库数据
+	oldPostings, size, err := engine.FetchPostings(p.Token)
+	if err != nil {
+		return fmt.Errorf("updatePostings fetchPostings err: %v", err)
+	}
+	// merge
+	if size > 0 {
+		p.PostingsList = engine.MergePostings(oldPostings, p.PostingsList)
+		p.DocsCount += size
+	}
+	// 开始写入数据库
+	buf, err := engine.EncodePostings(p.PostingsList, p.DocsCount)
+	if err != nil {
+		return fmt.Errorf("updatePostings encodePostings err: %v", err)
+	}
+	return in.InvertedDB.DBUpdatePostings(p.Token, buf.Bytes())
+}
+
 // Close --
-func (e *Engine) Close() {
-	e.InvertedDB.Close()
-	e.ForwardDB.Close()
-}
-
-// 创建倒排列表
-func createNewPostingsList(docID uint64) *PostingsList {
-	p := new(PostingsList)
-	p.DocID = docID
-	p.positionCount = 1
-	p.positions = make([]uint64, 0)
-	return p
-}
-
-// 创建倒排索引
-func createNewInvertedIndex(token string, docCount uint64) *InvertedIndexValue {
-	p := new(InvertedIndexValue)
-	p.docsCount = docCount
-	p.Token = token
-	p.positionCount = 0
-	p.postingsList = new(PostingsList)
-	return p
+func (in *Index) Close() {
+	in.Engine.Close()
 }
 
 // NewIndexEngine init
-func NewIndexEngine(termDB, invertedDB, forwardDB string) (*Engine, error) {
-	inverted := storage.NewInvertedDB(
-		termDB, invertedDB)
-	forward := storage.NewForwardDB(forwardDB)
-
-	return &Engine{
-		InvertedDB: inverted,
-		ForwardDB:  forward,
-		bufSize:    1,
-		N:          2,
-	}, nil
+func NewIndexEngine(termDB, invertedDB, forwardDB string) (*Index, error) {
+	e := engine.NewEngine(termDB, invertedDB, forwardDB)
+	if e == nil {
+		return nil, fmt.Errorf("NewIndexEngine err: %v", "engine is nil")
+	}
+	return &Index{e}, nil
 }

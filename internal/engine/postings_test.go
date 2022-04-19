@@ -1,13 +1,14 @@
-package index
+package engine
 
 import (
 	"encoding/binary"
-	log "github.com/sirupsen/logrus"
 	"reflect"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func Test_encodePostings(t *testing.T) {
+func TestEncodePostings(t *testing.T) {
 	type args struct {
 		postings    *PostingsList
 		postingsLen uint64
@@ -19,24 +20,24 @@ func Test_encodePostings(t *testing.T) {
 		want    []uint64
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			"test1", args{
 				&PostingsList{
 					DocID:         234,
-					positions:     []uint64{8, 9},
-					positionCount: 2},
+					Positions:     []uint64{8, 9},
+					PositionCount: 2},
 				0},
-			[]uint64{234, 2, 8, 9},
+			[]uint64{0, 234, 2, 8, 9},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := encodePostings(tt.args.postings, tt.args.postingsLen)
+			got, err := EncodePostings(tt.args.postings, tt.args.postingsLen)
 
-			a := make([]uint64, 4)
+			a := make([]uint64, 5)
 			binary.Read(got, binary.LittleEndian, &a)
+			log.Debug(a)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("encodePostings() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -50,10 +51,10 @@ func Test_encodePostings(t *testing.T) {
 
 func TestPos(t *testing.T) {
 	p := new(PostingsList)
-	p.positionCount = 1
+	p.PositionCount = 1
 	p.DocID = 234
-	p.positions = []uint64{8, 9}
-	got, err := encodePostings(p, 0)
+	p.Positions = []uint64{8, 9}
+	got, err := EncodePostings(p, 0)
 	if err != nil {
 		t.Errorf("encodePostings() error = %v, wantErr %v", err, nil)
 		return
@@ -65,4 +66,8 @@ func TestPos(t *testing.T) {
 	a := make([]uint64, 4)
 	binary.Read(got, binary.LittleEndian, &a)
 	log.Debug(a)
+}
+
+func init() {
+	log.SetLevel(log.DebugLevel)
 }

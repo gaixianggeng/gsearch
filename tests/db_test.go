@@ -4,7 +4,9 @@ import (
 	"brain/internal/storage"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/boltdb/bolt"
@@ -19,7 +21,7 @@ func TestReadDB(t *testing.T) {
 	binary.Read(buf, binary.LittleEndian, &a)
 	log.Debug(a)
 }
-func TestBucket_Get_FromNode(t *testing.T) {
+func TestBucketGetFromNode(t *testing.T) {
 
 	termName := "../data/term.db"
 	db, err := bolt.Open(termName, 0600, nil)
@@ -27,15 +29,48 @@ func TestBucket_Get_FromNode(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	b, err := storage.Get(db, "term", []byte("据数"))
+	// for i := 0; i < 100; i++ {
+	// 	err = storage.Put(db, "term",
+	// 		[]byte(fmt.Sprintf("test%d", i)),
+	// 		[]byte(fmt.Sprintf("%d", i)))
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// }
+
+	b, err := storage.Get(db, "term", []byte("test1"))
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	buf := bytes.NewBuffer(b)
-	a := make([]uint64, 2)
+	a := make([]byte, len(b))
 	binary.Read(buf, binary.LittleEndian, &a)
-	log.Debugf("%v", a)
+	log.Debugf("%s", a)
+}
+
+func TestSort(t *testing.T) {
+	key := "a"
+	nodes := []string{"b", "d", "e", "f"}
+
+	exact := false
+	index := sort.Search(len(nodes), func(i int) bool {
+		// TODO(benbjohnson): Optimize this range search. It's a bit hacky right now.
+		// sort.Search() finds the lowest index where f() != -1 but we need the highest index.
+		ret := bytes.Compare([]byte(nodes[i]), []byte(key))
+		if ret == 0 {
+			exact = true
+		}
+		return ret != -1
+	})
+
+	fmt.Printf("sort:%d, %v\n", index, exact)
+
+}
+
+func TestCom(t *testing.T) {
+
+	ret := bytes.Compare([]byte("a"), []byte("b"))
+	fmt.Println(ret)
 }
 
 func TestGetForward(t *testing.T) {

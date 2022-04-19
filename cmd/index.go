@@ -28,7 +28,7 @@ func run() {
 	addDoc(engine)
 }
 
-func addDoc(engine *index.Engine) {
+func addDoc(engine *index.Index) {
 	docList := readFile(sourceFile)
 	for _, item := range docList {
 		log.Debug(item)
