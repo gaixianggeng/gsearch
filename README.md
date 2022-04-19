@@ -53,6 +53,10 @@ https://github.com/bwmarrin/snowflake
 
 ---
 
+
+只写入，不修改，每次根据size设置的阈值写入数据。
+TODO: 段数量过多，需要合并: https://github.com/gaixianggeng/brain/blob/fbb74b167eed900ebcb4c11e14b87541dace60e3/internal/index/index.go#L63
+
 写入直接os.File写入，记录offset 不会涉及到mmap的页读取，所以直接根据write量记录offset
 
 初始化打开文件时，读取文件，设置offset即可

@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"brain/util"
+	utils "brain/utils"
 	"bytes"
 
 	log "github.com/sirupsen/logrus"
@@ -56,9 +56,16 @@ func MergeInvertedIndex(base, toBeAdded InvertedIndexHash) {
 
 }
 
-// 解码
-func decodePostings() {
+// decodePostings 解码 return *PostingsList postingslen err
+func decodePostings(buf *bytes.Buffer) (*PostingsList, uint64, error) {
+	if buf == nil || buf.Len() == 0 {
+		return nil, 0, nil
+	}
+	// p := new(PostingsList)
+	// buf := bytes.NewBuffer([]byte{})
+	// utils.BinaryRead(buf)
 
+	return nil, 0, nil
 }
 
 // EncodePostings 编码
@@ -66,7 +73,7 @@ func decodePostings() {
 // docCount暂时用不到
 func EncodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer([]byte{})
-	err := util.BinaryWrite(buf, postingsLen)
+	err := utils.BinaryWrite(buf, postingsLen)
 	if err != nil {
 		return nil, err
 	}
@@ -74,15 +81,15 @@ func EncodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, 
 	log.Debug(len(buf.Bytes()))
 	for postings != nil {
 		log.Debugf("docid:%d,count:%d,positions:%v", postings.DocID, postings.PositionCount, postings.Positions)
-		err := util.BinaryWrite(buf, postings.DocID)
+		err := utils.BinaryWrite(buf, postings.DocID)
 		if err != nil {
 			return nil, err
 		}
-		err = util.BinaryWrite(buf, postings.PositionCount)
+		err = utils.BinaryWrite(buf, postings.PositionCount)
 		if err != nil {
 			return nil, err
 		}
-		err = util.BinaryWrite(buf, postings.Positions)
+		err = utils.BinaryWrite(buf, postings.Positions)
 		if err != nil {
 			return nil, err
 		}
@@ -90,10 +97,4 @@ func EncodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, 
 	}
 	log.Debug(len(buf.Bytes()))
 	return buf, nil
-}
-
-// FetchPostings --
-func FetchPostings(token string) (*PostingsList, uint64, error) {
-
-	return nil, 0, nil
 }

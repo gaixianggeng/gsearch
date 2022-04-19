@@ -52,20 +52,22 @@ func (in *Index) AddDocument(doc *storage.Document) error {
 
 }
 
+// 落盘
 func (in *Index) updatePostings(p *engine.InvertedIndexValue) error {
 	if p == nil {
 		return fmt.Errorf("updatePostings p is nil")
 	}
-	// 拉取数据库数据
-	oldPostings, size, err := engine.FetchPostings(p.Token)
-	if err != nil {
-		return fmt.Errorf("updatePostings fetchPostings err: %v", err)
-	}
-	// merge
-	if size > 0 {
-		p.PostingsList = engine.MergePostings(oldPostings, p.PostingsList)
-		p.DocsCount += size
-	}
+	// 不需要拉取后merge，直接写入文件
+	// // 拉取数据库数据
+	// oldPostings, size, err := in.FetchPostings(p.Token)
+	// if err != nil {
+	// 	return fmt.Errorf("updatePostings fetchPostings err: %v", err)
+	// }
+	// // merge
+	// if size > 0 {
+	// 	p.PostingsList = engine.MergePostings(oldPostings, p.PostingsList)
+	// 	p.DocsCount += size
+	// }
 	// 开始写入数据库
 	buf, err := engine.EncodePostings(p.PostingsList, p.DocsCount)
 	if err != nil {

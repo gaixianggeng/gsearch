@@ -1,8 +1,8 @@
 package storage
 
 import (
+	"brain/utils"
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"os"
 
@@ -31,8 +31,10 @@ func (t *InvertedDB) DBUpdatePostings(token string, values []byte) error {
 	// 写入b+tree
 	buf := bytes.NewBuffer(nil)
 	log.Debugf("offset:%d, size:%d", t.offset, size)
-	binary.Write(buf, binary.LittleEndian, t.offset)
-	binary.Write(buf, binary.LittleEndian, size)
+	err = utils.BinaryWrite(buf, []uint64{t.offset, size})
+	if err != nil {
+		return fmt.Errorf("DBUpdatePostings BinaryWrite err: %v", err)
+	}
 
 	//update offset
 	t.offset += size
@@ -48,17 +50,6 @@ func (t *InvertedDB) Put(key, value []byte) error {
 // Get 通过term获取value
 func (t *InvertedDB) Get(key []byte) (value []byte, err error) {
 	return Get(t.db, termBucket, key)
-}
-
-// GetTokenCount -- ?查询的时候用到
-func (t *InvertedDB) GetTokenCount(token string, docID uint64) (uint64, error) {
-	// c, err := Get(t.db, termBucket, []byte(token))
-	// if err != nil {
-	// 	return 0, fmt.Errorf("GetTokenCount Get err: %v", err)
-	// }
-
-	return 0, nil
-
 }
 
 func (t *InvertedDB) storagePostings(postings []byte) (uint64, error) {
