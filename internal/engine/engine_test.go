@@ -108,7 +108,6 @@ func TestEngineFetchPostings(t *testing.T) {
 		want1   uint64
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "test1", args: args{"据数"}, want: nil, want1: 1, wantErr: false,
 		},

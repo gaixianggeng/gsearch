@@ -73,7 +73,7 @@ func (in *Index) updatePostings(p *engine.InvertedIndexValue) error {
 	if err != nil {
 		return fmt.Errorf("updatePostings encodePostings err: %v", err)
 	}
-	return in.InvertedDB.DBUpdatePostings(p.Token, buf.Bytes())
+	return in.InvertedDB.DBUpdatePostings(p.Token, buf.Bytes(), p.DocsCount)
 }
 
 // Close --

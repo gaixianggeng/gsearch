@@ -21,8 +21,10 @@ type InvertedDB struct {
 	offset uint64
 }
 
+type termInfo [3]uint64
+
 // DBUpdatePostings 倒排列表存储到数据库中
-func (t *InvertedDB) DBUpdatePostings(token string, values []byte) error {
+func (t *InvertedDB) DBUpdatePostings(token string, values []byte, docCount uint64) error {
 	// 写入file，获取写入的size
 	size, err := t.storagePostings(values)
 	if err != nil {
@@ -32,9 +34,13 @@ func (t *InvertedDB) DBUpdatePostings(token string, values []byte) error {
 	// 写入b+tree
 	buf := bytes.NewBuffer(nil)
 	log.Debugf("offset:%d, size:%d", t.offset, size)
+	err = utils.BinaryWrite(buf, docCount)
+	if err != nil {
+		return fmt.Errorf("BinaryWrite docCount err: %v", err)
+	}
 	err = utils.BinaryWrite(buf, []uint64{t.offset, size})
 	if err != nil {
-		return fmt.Errorf("DBUpdatePostings BinaryWrite err: %v", err)
+		return fmt.Errorf("BinaryWrite offset size err: %v", err)
 	}
 
 	//update offset
@@ -53,19 +59,20 @@ func (t *InvertedDB) Get(key []byte) (value []byte, err error) {
 	return Get(t.db, termBucket, key)
 }
 
-// GetForwordAddr 获取正排地址
-func (t *InvertedDB) GetForwordAddr(token string) (offset uint64, size uint64, err error) {
+// GetTermInfo 获取正排地址
+func (t *InvertedDB) GetTermInfo(token string) (*termInfo, error) {
 	c, err := t.Get([]byte(token))
 	if err != nil {
-		return 0, 0, fmt.Errorf("fetchPostings Get err: %v", err)
+		return nil, fmt.Errorf("GetTermInfo err:%v", err)
 	}
-	p := make([]uint64, 2)
 
+	p := new(termInfo)
 	err = binary.Read(bytes.NewBuffer(c), binary.LittleEndian, &p)
 	if err != nil {
-		return 0, 0, fmt.Errorf("fetchPostings BinaryRead err: %v", err)
+		return nil, fmt.Errorf("fetchPostings BinaryRead err: %v", err)
 	}
-	return p[0], p[1], nil
+
+	return p, nil
 }
 
 // GetForwordContent 根据地址获取读取文件

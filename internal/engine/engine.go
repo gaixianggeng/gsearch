@@ -144,13 +144,13 @@ func (e *Engine) Token2PostingsLists(bufInvertHash InvertedIndexHash, token stri
 // FetchPostings 通过token读取倒排表数据，返回倒排表、长度和err
 func (e *Engine) FetchPostings(token string) (*PostingsList, uint64, error) {
 
-	offset, size, err := e.InvertedDB.GetForwordAddr(token)
+	term, err := e.InvertedDB.GetTermInfo(token)
 	if err != nil {
 		return nil, 0, fmt.Errorf("FetchPostings getForwordAddr err: %v", err)
 	}
-	log.Debugf("offset:%v, size:%v \n", offset, size)
+	log.Debugf("offset:%v, size:%v \n", term)
 
-	c, err := e.InvertedDB.GetForwordContent(offset, size)
+	c, err := e.InvertedDB.GetForwordContent(term[1], term[2])
 	if err != nil {
 		return nil, 0, fmt.Errorf("FetchPostings getForwordContent err: %v", err)
 	}
