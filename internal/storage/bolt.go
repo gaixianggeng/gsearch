@@ -11,6 +11,7 @@ import (
 func Put(db *bolt.DB, bucket string, key []byte, value []byte) error {
 	log.Infof("put key:%s, value len:%d", string(key), len(value))
 	return db.Update(func(tx *bolt.Tx) error {
+		log.Debugf("bucket:%v\n", bucket)
 		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)

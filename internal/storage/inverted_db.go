@@ -3,6 +3,7 @@ package storage
 import (
 	"brain/utils"
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"os"
 
@@ -50,6 +51,31 @@ func (t *InvertedDB) Put(key, value []byte) error {
 // Get 通过term获取value
 func (t *InvertedDB) Get(key []byte) (value []byte, err error) {
 	return Get(t.db, termBucket, key)
+}
+
+// GetForwordAddr 获取正排地址
+func (t *InvertedDB) GetForwordAddr(token string) (offset uint64, size uint64, err error) {
+	c, err := t.Get([]byte(token))
+	if err != nil {
+		return 0, 0, fmt.Errorf("fetchPostings Get err: %v", err)
+	}
+	p := make([]uint64, 2)
+
+	err = binary.Read(bytes.NewBuffer(c), binary.LittleEndian, &p)
+	if err != nil {
+		return 0, 0, fmt.Errorf("fetchPostings BinaryRead err: %v", err)
+	}
+	return p[0], p[1], nil
+}
+
+// GetForwordContent 根据地址获取读取文件
+func (t *InvertedDB) GetForwordContent(offset uint64, size uint64) ([]byte, error) {
+	page := os.Getpagesize()
+	b, err := Mmap(int(t.file.Fd()), int64(offset/uint64(page)), int(offset+size))
+	if err != nil {
+		return nil, fmt.Errorf("GetForwordContent Mmap err: %v", err)
+	}
+	return b[offset : offset+size], nil
 }
 
 func (t *InvertedDB) storagePostings(postings []byte) (uint64, error) {

@@ -82,8 +82,7 @@ func (in *Index) Close() {
 }
 
 // NewIndexEngine init
-func NewIndexEngine(termDB, invertedDB, forwardDB string) (*Index, error) {
-	e := engine.NewEngine(termDB, invertedDB, forwardDB)
+func NewIndexEngine(e *engine.Engine) (*Index, error) {
 	if e == nil {
 		return nil, fmt.Errorf("NewIndexEngine err: %v", "engine is nil")
 	}

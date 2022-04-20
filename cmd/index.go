@@ -1,6 +1,7 @@
 package main
 
 import (
+	"brain/internal/engine"
 	"brain/internal/index"
 	"brain/internal/storage"
 	"fmt"
@@ -20,15 +21,17 @@ const (
 
 // 入口
 func run() {
-	engine, err := index.NewIndexEngine(termDB, invertedDB, forwardDB)
+
+	e := engine.NewEngine(termDB, invertedDB, forwardDB)
+	index, err := index.NewIndexEngine(e)
 	if err != nil {
 		panic(err)
 	}
-	defer engine.Close()
-	addDoc(engine)
+	defer index.Close()
+	addDoc(index)
 }
 
-func addDoc(engine *index.Index) {
+func addDoc(in *index.Index) {
 	docList := readFile(sourceFile)
 	for _, item := range docList {
 		log.Debug(item)
@@ -37,7 +40,7 @@ func addDoc(engine *index.Index) {
 			log.Errorf("doc2Struct err: %v", err)
 			doc = new(storage.Document)
 		}
-		err = engine.AddDocument(doc)
+		err = in.AddDocument(doc)
 		if err != nil {
 			log.Errorf("AddDocument err: %v", err)
 			break

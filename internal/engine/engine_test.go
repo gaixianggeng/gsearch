@@ -94,3 +94,46 @@ func TestIndex_token2PostingsLists(t *testing.T) {
 		})
 	}
 }
+
+func TestEngineFetchPostings(t *testing.T) {
+
+	type args struct {
+		token string
+	}
+	eng := NewEngine(termDB, invertedDB, forwardDB)
+	tests := []struct {
+		name    string
+		args    args
+		want    *PostingsList
+		want1   uint64
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{
+			name: "test1", args: args{"据数"}, want: nil, want1: 1, wantErr: false,
+		},
+		{
+			name: "test2", args: args{"数据"}, want: nil, want1: 2, wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			got, got1, err := eng.FetchPostings(tt.args.token)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Engine.FetchPostings() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			for got != nil {
+				t.Logf("got:%v", got)
+				got = got.Next
+			}
+			// if !reflect.DeepEqual(got, tt.want) {
+			// 	t.Errorf("Engine.FetchPostings() got = %v, want %v", got, tt.want)
+			// }
+			if got1 != tt.want1 {
+				t.Errorf("Engine.FetchPostings() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}

@@ -3,6 +3,7 @@ package engine
 import (
 	utils "brain/utils"
 	"bytes"
+	"encoding/binary"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -61,11 +62,43 @@ func decodePostings(buf *bytes.Buffer) (*PostingsList, uint64, error) {
 	if buf == nil || buf.Len() == 0 {
 		return nil, 0, nil
 	}
-	// p := new(PostingsList)
-	// buf := bytes.NewBuffer([]byte{})
-	// utils.BinaryRead(buf)
+	var postingsLen uint64
+	err := binary.Read(buf, binary.LittleEndian, &postingsLen)
+	if err != nil {
+		return nil, 0, err
+	}
+	log.Debugf("postingsLen:%d", postingsLen)
 
-	return nil, 0, nil
+	log.Debugf("before buf.Len():%d", buf.Len())
+
+	cp := new(PostingsList)
+	p := cp
+	for buf.Len() > 0 {
+
+		temp := new(PostingsList)
+		err = binary.Read(buf, binary.LittleEndian, &temp.DocID)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		err = binary.Read(buf, binary.LittleEndian, &temp.PositionCount)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		temp.Positions = make([]uint64, temp.PositionCount)
+		err = binary.Read(buf, binary.LittleEndian, &temp.Positions)
+		if err != nil {
+			return nil, 0, err
+		}
+		log.Debugf("postings:%v", temp)
+		cp.Next = temp
+		cp = temp
+
+	}
+
+	log.Debugf("after buf.Len():%d", buf.Len())
+	return p.Next, postingsLen, nil
 }
 
 // EncodePostings 编码

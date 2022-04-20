@@ -3,7 +3,6 @@ package engine
 import (
 	"brain/internal/query"
 	"brain/internal/storage"
-	"brain/utils"
 	"bytes"
 	"fmt"
 
@@ -145,29 +144,17 @@ func (e *Engine) Token2PostingsLists(bufInvertHash InvertedIndexHash, token stri
 // FetchPostings 通过token读取倒排表数据，返回倒排表、长度和err
 func (e *Engine) FetchPostings(token string) (*PostingsList, uint64, error) {
 
-	offset, size, err := e.getForwordAddr(token)
+	offset, size, err := e.InvertedDB.GetForwordAddr(token)
 	if err != nil {
 		return nil, 0, fmt.Errorf("FetchPostings getForwordAddr err: %v", err)
 	}
-	c, err := e.getForwordContent(offset, size)
+	log.Debugf("offset:%v, size:%v \n", offset, size)
+
+	c, err := e.InvertedDB.GetForwordContent(offset, size)
 	if err != nil {
 		return nil, 0, fmt.Errorf("FetchPostings getForwordContent err: %v", err)
 	}
 	return decodePostings(bytes.NewBuffer(c))
-}
-
-// 获取正排地址
-func (e *Engine) getForwordAddr(token string) (offset uint64, size uint64, err error) {
-	c, err := e.InvertedDB.Get([]byte(token))
-	if err != nil {
-		return 0, 0, fmt.Errorf("fetchPostings Get err: %v", err)
-	}
-	p := make([]uint64, 2)
-	err = utils.BinaryRead(bytes.NewBuffer(c), p)
-	if err != nil {
-		return 0, 0, fmt.Errorf("fetchPostings BinaryRead err: %v", err)
-	}
-	return p[0], p[1], nil
 }
 
 // getTokenCount 通过token获取doc数量 insert 标识是写入还是查询 写入时不为空
@@ -177,11 +164,6 @@ func (e *Engine) getTokenCount(token string) (uint64, error) {
 		return 0, fmt.Errorf("getTokenCount FetchPostings err: %v", err)
 	}
 	return c, nil
-}
-
-// 根据地址获取读取文件
-func (e *Engine) getForwordContent(offset uint64, size uint64) ([]byte, error) {
-	return nil, nil
 }
 
 // NewEngine --

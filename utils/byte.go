@@ -16,7 +16,7 @@ func BinaryWrite(buf *bytes.Buffer, v any) error {
 	return binary.Write(buf, binary.LittleEndian, v)
 }
 
-// BinaryRead bytes.Buffer -> any
-func BinaryRead(buf *bytes.Buffer, v any) error {
-	return binary.Read(buf, binary.LittleEndian, &v)
-}
+// // BinaryRead bytes.Buffer -> any
+// func BinaryRead(buf *bytes.Buffer, v any) error {
+// 	return binary.Read(buf, binary.LittleEndian, &v)
+// }

@@ -14,7 +14,7 @@ import (
 )
 
 func TestReadDB(t *testing.T) {
-	c, _ := os.ReadFile("../data/forward.db")
+	c, _ := os.ReadFile("../data/inverted.db")
 	log.Debug(len(c))
 	buf := bytes.NewBuffer(c)
 	a := make([]uint64, len(c)/8)
