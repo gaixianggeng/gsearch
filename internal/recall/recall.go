@@ -3,6 +3,7 @@ package recall
 import (
 	"brain/internal/engine"
 	"fmt"
+	"sort"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -10,7 +11,7 @@ import (
 // Recall 查询召回
 type Recall struct {
 	*engine.Engine
-	queryTokenHash []*queryTokenHash
+	queryToken []*queryTokenHash
 }
 
 // 用于实现排序map
@@ -44,18 +45,14 @@ func (r *Recall) splitQuery2Tokens(query string) error {
 	if err != nil {
 		return fmt.Errorf("text2postingslists err: %v", err)
 	}
-	log.Debugf("queryHash:%v,engine:%v", r.queryTokenHash, &r.Engine.PostingsHashBuf)
+	log.Debugf("queryHash:%v,engine:%v", r.queryToken, &r.Engine.PostingsHashBuf)
 	return nil
 }
 
 func (r *Recall) searchDoc() (*SearchResult, error) {
 
-	err := r.sortToken(r.Engine.PostingsHashBuf)
-	if err != nil {
-		return nil, fmt.Errorf("sortToken err: %v", err)
-	}
-
-	if len(r.queryTokenHash) == 0 {
+	r.sortToken(r.Engine.PostingsHashBuf)
+	if len(r.queryToken) == 0 {
 		return nil, fmt.Errorf("queryTokenHash is nil")
 	}
 
@@ -63,10 +60,20 @@ func (r *Recall) searchDoc() (*SearchResult, error) {
 }
 
 // token 根据doc count升序排序
-func (r *Recall) sortToken(postHash engine.InvertedIndexHash) error {
+func (r *Recall) sortToken(postHash engine.InvertedIndexHash) {
+	tokenHash := make([]*queryTokenHash, 0)
+	for token, invertedIndex := range postHash {
+		q := new(queryTokenHash)
+		q.token = token
+		q.invertedIndex = invertedIndex
+		tokenHash = append(tokenHash, q)
+	}
 
-	return nil
-
+	log.Debugf("tokenHash:%v", tokenHash)
+	sort.Sort(docCountSort(tokenHash))
+	log.Debugf("tokenHash:%v", tokenHash)
+	r.queryToken = tokenHash
+	return
 }
 
 // NewRecall new
