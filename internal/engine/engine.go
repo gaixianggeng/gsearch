@@ -159,11 +159,16 @@ func (e *Engine) FetchPostings(token string) (*PostingsList, uint64, error) {
 
 // getTokenCount 通过token获取doc数量 insert 标识是写入还是查询 写入时不为空
 func (e *Engine) getTokenCount(token string) (uint64, error) {
-	_, c, err := e.FetchPostings(token)
-	if err != nil {
-		return 0, fmt.Errorf("getTokenCount FetchPostings err: %v", err)
+	// _, c, err := e.FetchPostings(token)
+	// if err != nil {
+	// 	return 0, fmt.Errorf("getTokenCount FetchPostings err: %v", err)
+	// }
+	// return c, nil
+	termInfo, err := e.InvertedDB.GetTermInfo(token)
+	if err != nil || termInfo == nil {
+		return 0, fmt.Errorf("getTokenCount GetTermInfo err: %v", err)
 	}
-	return c, nil
+	return termInfo[0], nil
 }
 
 // NewEngine --
