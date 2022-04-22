@@ -47,7 +47,7 @@ func MergeInvertedIndex(base, toBeAdded InvertedIndexHash) {
 			log.Debug("mergeInvertedIndex tokenID:", token)
 			// 不需要+=positionCount 查询时候用到的字段，不需要写入到倒排表中
 			index.PostingsList = MergePostings(index.PostingsList, toBeAddedIndex.PostingsList)
-			index.DocsCount += toBeAddedIndex.DocsCount
+			index.DocCount += toBeAddedIndex.DocCount
 			delete(toBeAdded, token)
 		}
 	}
@@ -67,14 +67,9 @@ func decodePostings(buf *bytes.Buffer) (*PostingsList, uint64, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	log.Debugf("postingsLen:%d", postingsLen)
-
-	log.Debugf("before buf.Len():%d", buf.Len())
-
 	cp := new(PostingsList)
 	p := cp
 	for buf.Len() > 0 {
-
 		temp := new(PostingsList)
 		err = binary.Read(buf, binary.LittleEndian, &temp.DocID)
 		if err != nil {
@@ -96,8 +91,6 @@ func decodePostings(buf *bytes.Buffer) (*PostingsList, uint64, error) {
 		cp = temp
 
 	}
-
-	log.Debugf("after buf.Len():%d", buf.Len())
 	return p.Next, postingsLen, nil
 }
 
@@ -111,7 +104,6 @@ func EncodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, 
 		return nil, err
 	}
 
-	log.Debug(len(buf.Bytes()))
 	for postings != nil {
 		log.Debugf("docid:%d,count:%d,positions:%v", postings.DocID, postings.PositionCount, postings.Positions)
 		err := utils.BinaryWrite(buf, postings.DocID)
@@ -128,6 +120,5 @@ func EncodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, 
 		}
 		postings = postings.Next
 	}
-	log.Debug(len(buf.Bytes()))
 	return buf, nil
 }

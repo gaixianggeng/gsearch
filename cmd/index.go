@@ -34,25 +34,30 @@ func run() {
 func addDoc(in *index.Index) {
 	docList := readFile(sourceFile)
 	for _, item := range docList {
-		log.Debug(item)
 		doc, err := doc2Struct(item)
 		if err != nil {
 			log.Errorf("doc2Struct err: %v", err)
 			doc = new(storage.Document)
 		}
+		log.Debugf("doc_id:%v,title:%s", doc.DocID, doc.Title)
 		err = in.AddDocument(doc)
 		if err != nil {
 			log.Errorf("AddDocument err: %v", err)
 			break
 		}
+		// // 达到阈值
+		if len(in.PostingsHashBuf) > 0 && (in.BufCount > in.BufSize) {
+			in.Flush()
+		}
 	}
+	// 读取结束 写入磁盘
+	in.Flush()
 }
 
 func doc2Struct(docStr string) (*storage.Document, error) {
 
 	d := strings.Split(docStr, "\t")
 
-	log.Debugf("doc:%s,len:%d", docStr, len(d))
 	if len(d) < 3 {
 		return nil, fmt.Errorf("doc2Struct err: %v", "docStr is not right")
 	}

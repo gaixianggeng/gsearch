@@ -16,7 +16,7 @@ type Index struct {
 
 // AddDocument 添加文档
 func (in *Index) AddDocument(doc *storage.Document) error {
-	if doc.DocID > 0 && doc.Title != "" {
+	if doc != nil && doc.DocID > 0 && doc.Title != "" {
 		err := in.ForwardDB.Add(doc)
 		if err != nil {
 			return fmt.Errorf("forward doc add err: %v", err)
@@ -29,32 +29,31 @@ func (in *Index) AddDocument(doc *storage.Document) error {
 		in.IndexCount++
 	}
 
+	return nil
+}
+
+// Flush 落盘操作
+func (in *Index) Flush() error {
 	log.Debugf("start storage...%v,len:%d", in.PostingsHashBuf, len(in.PostingsHashBuf))
-
-	// 落盘操作 title = ""表示文件读取结束
-	if len(in.PostingsHashBuf) > 0 && (in.BufCount > in.BufSize || doc.Title == "") {
-
-		for token, invertedIndex := range in.PostingsHashBuf {
-
-			log.Debugf("token:%s,invertedIndex:%v\n", token, invertedIndex)
-			err := in.updatePostings(invertedIndex)
-			if err != nil {
-				log.Errorf("updatePostings err: %v", err)
-				return fmt.Errorf("updatePostings err: %v", err)
-			}
+	// title = ""表示文件读取结束
+	for token, invertedIndex := range in.PostingsHashBuf {
+		log.Debugf("token:%s,invertedIndex:%v\n", token, invertedIndex)
+		err := in.updatePostings(invertedIndex)
+		if err != nil {
+			log.Errorf("updatePostings err: %v", err)
+			return fmt.Errorf("updatePostings err: %v", err)
 		}
-		// 更新index count
-		if in.IndexCount > 0 {
-			err := in.updateCount(in.IndexCount)
-			if err != nil {
-				return fmt.Errorf("updateCount err: %v", err)
-			}
-		}
-
-		// 重置
-		in.PostingsHashBuf = make(engine.InvertedIndexHash)
-		in.BufCount = 0
 	}
+	// 更新index count
+	if in.IndexCount > 0 {
+		err := in.updateCount(in.IndexCount)
+		if err != nil {
+			return fmt.Errorf("updateCount err: %v", err)
+		}
+	}
+	// 重置
+	in.PostingsHashBuf = make(engine.InvertedIndexHash)
+	in.BufCount = 0
 
 	return nil
 
@@ -70,6 +69,7 @@ func (in *Index) updateCount(num uint64) error {
 		}
 	}
 	count += num
+	in.IndexCount = 0
 	return in.ForwardDB.UpdateCount(count)
 }
 
@@ -90,11 +90,11 @@ func (in *Index) updatePostings(p *engine.InvertedIndexValue) error {
 	// 	p.DocsCount += size
 	// }
 	// 开始写入数据库
-	buf, err := engine.EncodePostings(p.PostingsList, p.DocsCount)
+	buf, err := engine.EncodePostings(p.PostingsList, p.DocCount)
 	if err != nil {
 		return fmt.Errorf("updatePostings encodePostings err: %v", err)
 	}
-	return in.InvertedDB.DBUpdatePostings(p.Token, buf.Bytes(), p.DocsCount)
+	return in.InvertedDB.DBUpdatePostings(p.Token, buf.Bytes(), p.DocCount)
 }
 
 // Close --

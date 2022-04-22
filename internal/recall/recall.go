@@ -22,9 +22,14 @@ type queryTokenHash struct {
 	invertedIndex *engine.InvertedIndexValue
 }
 
-// SearchResult 查询结果
-type SearchResult struct {
+// SearchItem 查询结果
+type SearchItem struct {
+	DocID uint64
+	Score float64
 }
+
+// Recalls 召回结果
+type Recalls []*SearchItem
 
 // token游标 标识当前位置
 type searchCursor struct {
@@ -41,11 +46,15 @@ type phraseCursor struct {
 }
 
 // Search 入口
-func (r *Recall) Search(query string) (*SearchResult, error) {
+func (r *Recall) Search(query string) (Recalls, error) {
 	err := r.splitQuery2Tokens(query)
 	if err != nil {
 		log.Errorf("splitQuery2Tokens err: %v", err)
 		return nil, fmt.Errorf("splitQuery2Tokens err: %v", err)
+	}
+	r.sortToken(r.Engine.PostingsHashBuf)
+	if len(r.queryToken) == 0 {
+		return nil, fmt.Errorf("queryTokenHash is nil")
 	}
 	return r.searchDoc()
 }
@@ -55,15 +64,12 @@ func (r *Recall) splitQuery2Tokens(query string) error {
 	if err != nil {
 		return fmt.Errorf("text2postingslists err: %v", err)
 	}
-	log.Debugf("queryHash:%v,engine:%v", r.queryToken, &r.Engine.PostingsHashBuf)
 	return nil
 }
 
-func (r *Recall) searchDoc() (*SearchResult, error) {
-	r.sortToken(r.Engine.PostingsHashBuf)
-	if len(r.queryToken) == 0 {
-		return nil, fmt.Errorf("queryTokenHash is nil")
-	}
+func (r *Recall) searchDoc() (Recalls, error) {
+
+	recalls := make(Recalls, 0)
 
 	tokenCount := len(r.queryToken)
 	cursors := make([]searchCursor, tokenCount)
@@ -81,6 +87,8 @@ func (r *Recall) searchDoc() (*SearchResult, error) {
 		if postings == nil {
 			return nil, fmt.Errorf("postings is nil")
 		}
+
+		log.Debugf("token:%v,invertedIndex:%v", t.token, postings.DocID)
 		cursors[i].doc = postings
 		cursors[i].current = postings
 	}
@@ -91,11 +99,13 @@ func (r *Recall) searchDoc() (*SearchResult, error) {
 		// 拥有文档最少的token作为标尺
 		docID = cursors[0].current.DocID
 
+		// 匹配其他token的doc
 		for i := 1; i < tokenCount; i++ {
 			cur := cursors[i]
 			for cur.current != nil && cur.current.DocID < docID {
 				cur.current = cur.current.Next
 			}
+			// 存在token关联的docid都小于cursors[0]的docID，则跳出
 			if cur.current == nil {
 				log.Infof("cur.current is nil\n")
 				break
@@ -107,25 +117,31 @@ func (r *Recall) searchDoc() (*SearchResult, error) {
 				break
 			}
 		}
+
+		log.Debugf("当前docID:%v,nextDocID:%v", docID, nextDocID)
 		if nextDocID > 0 {
 			// 不断获取A的下一个document_id，直到其当前的document_id不小于next_doc_id为止
 			for cursors[0].current != nil && cursors[0].current.DocID < nextDocID {
 				cursors[0].current = cursors[0].current.Next
 			}
 		} else {
+			// 有匹配上的docid
 			phraseCount := int64(-1)
 			if r.enablePhrase {
 				phraseCount = r.searchPhrase(r.queryToken, cursors)
 			}
+			score := 0.0
 			if phraseCount > 0 {
 				// TODO: 计算相关性
 				r.calculateScore(cursors, uint64(tokenCount))
 			}
 			cursors[0].current = cursors[0].current.Next
+			log.Debugf("匹配召回docID:%v,nextDocID:%v,phrase:%d", docID, nextDocID, phraseCount)
+			recalls = append(recalls, &SearchItem{DocID: docID, Score: score})
 		}
 	}
-
-	return nil, nil
+	log.Debugf("recalls size:%v", len(recalls))
+	return recalls, nil
 }
 
 // 计算相关性
@@ -217,18 +233,16 @@ func (r *Recall) sortToken(postHash engine.InvertedIndexHash) {
 		q.invertedIndex = invertedIndex
 		tokenHash = append(tokenHash, q)
 	}
-
-	log.Debugf("tokenHash:%v", tokenHash)
 	sort.Sort(docCountSort(tokenHash))
-	log.Debugf("tokenHash:%v", tokenHash)
 	r.queryToken = tokenHash
+	for _, t := range r.queryToken {
+		log.Debugf("token:%v,docCount:%v", t.token, t.invertedIndex.DocCount)
+	}
 	return
 }
 
 // NewRecall new
 func NewRecall(e *engine.Engine) *Recall {
-	// TODO: get doc count
-
 	docCount, err := e.ForwardDB.Count()
 	if err != nil {
 		log.Fatalf("e.ForwardDB.Count() error:%v\n", err)

@@ -81,7 +81,7 @@ func TestIndex_token2PostingsLists(t *testing.T) {
 				t.Errorf("Index.token2PostingsLists() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			count := tt.args.bufInvertHash[tt.args.token].PositionCount
-			docCount := tt.args.bufInvertHash[tt.args.token].DocsCount
+			docCount := tt.args.bufInvertHash[tt.args.token].DocCount
 			if tt.name == "test1" && (count != 1 || docCount != 1) {
 				t.Errorf("count:%v,docCount:%v", count, docCount)
 			}
@@ -113,6 +113,12 @@ func TestEngineFetchPostings(t *testing.T) {
 		},
 		{
 			name: "test2", args: args{"数据"}, want: nil, want1: 2, wantErr: false,
+		},
+		{
+			name: "test3", args: args{"北京"}, want: nil, want1: 2, wantErr: false,
+		},
+		{
+			name: "test4", args: args{"道口"}, want: nil, want1: 2, wantErr: false,
 		},
 	}
 	for _, tt := range tests {

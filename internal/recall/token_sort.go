@@ -3,7 +3,7 @@ package recall
 type docCountSort []*queryTokenHash
 
 func (q docCountSort) Less(i, j int) bool {
-	return q[i].invertedIndex.DocsCount < q[j].invertedIndex.DocsCount
+	return q[i].invertedIndex.DocCount < q[j].invertedIndex.DocCount
 }
 
 func (q docCountSort) Swap(i, j int) {

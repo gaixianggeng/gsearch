@@ -34,7 +34,7 @@ type PostingsList struct {
 type InvertedIndexValue struct {
 	Token         string
 	PostingsList  *PostingsList
-	DocsCount     uint64
+	DocCount      uint64
 	PositionCount uint64 // 查询使用，写入的时候暂时用不到
 }
 
@@ -53,7 +53,7 @@ func CreateNewPostingsList(docID uint64) *PostingsList {
 // CreateNewInvertedIndex 创建倒排索引
 func CreateNewInvertedIndex(token string, docCount uint64) *InvertedIndexValue {
 	p := new(InvertedIndexValue)
-	p.DocsCount = docCount
+	p.DocCount = docCount
 	p.Token = token
 	p.PositionCount = 0
 	p.PostingsList = new(PostingsList)
@@ -83,7 +83,6 @@ func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
 	log.Debugf("bufInvertedHash:%v", bufInvertedHash)
 
 	if e.PostingsHashBuf != nil && len(e.PostingsHashBuf) > 0 {
-		log.Debug("mergeInvertedIndex-----")
 		MergeInvertedIndex(e.PostingsHashBuf, bufInvertedHash)
 	} else {
 		e.PostingsHashBuf = make(InvertedIndexHash)
@@ -107,13 +106,11 @@ func (e *Engine) Token2PostingsLists(bufInvertHash InvertedIndexHash, token stri
 
 	pl := new(PostingsList)
 	if bufInvert != nil && bufInvert.PostingsList != nil {
-		log.Debug("bufInvert.postingsList is not nil")
 		pl = bufInvert.PostingsList
 		// 这里的positioinCount和下面bufInvert的positionCount是不一样的
 		// 这里统计的是同一个docid的position的个数
 		pl.PositionCount++
 	} else {
-		log.Debug("bufInvert.postingsList is nil")
 		// 不为空表示写入操作，否则为查询
 		docCount := uint64(0)
 		if docID != 0 {
@@ -147,7 +144,6 @@ func (e *Engine) FetchPostings(token string) (*PostingsList, uint64, error) {
 	if err != nil {
 		return nil, 0, fmt.Errorf("FetchPostings getForwordAddr err: %v", err)
 	}
-	log.Debugf("offset:%v, size:%v \n", term)
 
 	c, err := e.InvertedDB.GetForwordContent(term[1], term[2])
 	if err != nil {
@@ -180,7 +176,7 @@ func NewEngine(termName, invertedName, forwardName string) *Engine {
 		ForwardFileName: forwardName,
 		InvertedDB:      inverted,
 		ForwardDB:       forward,
-		BufSize:         1,
+		BufSize:         1000,
 		N:               2,
 	}
 
