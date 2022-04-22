@@ -1,9 +1,9 @@
 package main
 
 import (
-	"brain/internal/engine"
-	"brain/internal/index"
-	"brain/internal/storage"
+	"doraemon/internal/engine"
+	"doraemon/internal/index"
+	"doraemon/internal/storage"
 	"fmt"
 	"os"
 	"strconv"

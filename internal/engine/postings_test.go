@@ -67,7 +67,3 @@ func TestPos(t *testing.T) {
 	binary.Read(got, binary.LittleEndian, &a)
 	log.Debug(a)
 }
-
-func init() {
-	log.SetLevel(log.DebugLevel)
-}

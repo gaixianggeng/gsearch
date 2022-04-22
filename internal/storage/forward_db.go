@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/boltdb/bolt"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/boltdb/bolt"
 )
 
 const bucketName = "forward"

@@ -1,8 +1,8 @@
 package index
 
 import (
-	"brain/internal/engine"
-	"brain/internal/storage"
+	"doraemon/internal/engine"
+	"doraemon/internal/storage"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"

@@ -1,9 +1,9 @@
 package engine
 
 import (
-	"brain/internal/query"
-	"brain/internal/storage"
 	"bytes"
+	"doraemon/internal/query"
+	"doraemon/internal/storage"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"

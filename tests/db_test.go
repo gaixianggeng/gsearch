@@ -1,16 +1,17 @@
 package tests
 
 import (
-	"brain/internal/storage"
 	"bytes"
+	"doraemon/internal/storage"
 	"encoding/binary"
 	"fmt"
 	"os"
 	"sort"
 	"testing"
 
-	"github.com/boltdb/bolt"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/boltdb/bolt"
 )
 
 func TestReadDB(t *testing.T) {
@@ -90,9 +91,4 @@ func TestGetForward(t *testing.T) {
 	a := make([]byte, len(b))
 	binary.Read(buf, binary.LittleEndian, &a)
 	log.Debugf("%s", a)
-}
-
-func init() {
-	log.SetLevel(log.DebugLevel)
-	log.SetReportCaller(true)
 }

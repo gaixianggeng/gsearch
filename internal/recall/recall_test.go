@@ -1,10 +1,8 @@
 package recall
 
 import (
-	"brain/internal/engine"
+	"doraemon/internal/engine"
 	"testing"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -60,11 +58,6 @@ func TestRecall_sortToken(t *testing.T) {
 		})
 	}
 }
-func init() {
-	log.SetLevel(log.DebugLevel)
-	log.SetReportCaller(true)
-}
-
 func TestRecall_Search(t *testing.T) {
 	type args struct {
 		query string
@@ -80,7 +73,7 @@ func TestRecall_Search(t *testing.T) {
 			name: "test1", args: args{query: "数据"}, want: nil, wantErr: false,
 		},
 		{
-			name: "test2", args: args{query: "五道"}, want: nil, wantErr: false,
+			name: "test2", args: args{query: "五道口"}, want: nil, wantErr: false,
 		},
 	}
 	for _, tt := range tests {
