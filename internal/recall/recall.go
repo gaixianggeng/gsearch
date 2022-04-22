@@ -101,7 +101,7 @@ func (r *Recall) searchDoc() (Recalls, error) {
 
 		// 匹配其他token的doc
 		for i := 1; i < tokenCount; i++ {
-			cur := cursors[i]
+			cur := &cursors[i]
 			for cur.current != nil && cur.current.DocID < docID {
 				cur.current = cur.current.Next
 			}
@@ -158,7 +158,6 @@ func (r *Recall) searchPhrase(queryToken []*queryTokenHash, tokenCursors []searc
 	for _, t := range queryToken {
 		positionsSum += t.invertedIndex.PositionCount
 	}
-
 	cursors := make([]phraseCursor, positionsSum)
 	phraseCount := int64(0)
 	// 初始化游标 获取token关联的第一篇doc的pos相关数据
@@ -169,6 +168,8 @@ func (r *Recall) searchPhrase(queryToken []*queryTokenHash, tokenCursors []searc
 			cursors[n].positions = tokenCursors[i].current.Positions // 获取token的positions
 			cursors[n].current = &cursors[i].positions[0]            // 获取文档中出现的位置
 			cursors[n].index = 0                                     // 获取文档中出现的位置
+			log.Debugf("token:%s,pos:%v cur:%v,positions:%v",
+				t.token, pos, *cursors[n].current, cursors[n].positions)
 			n++
 		}
 	}
@@ -248,5 +249,5 @@ func NewRecall(e *engine.Engine) *Recall {
 		log.Fatalf("e.ForwardDB.Count() error:%v\n", err)
 		return nil
 	}
-	return &Recall{e, docCount, false, nil}
+	return &Recall{e, docCount, true, nil}
 }

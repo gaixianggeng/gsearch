@@ -2,7 +2,13 @@ package recall
 
 import (
 	"doraemon/internal/engine"
+	"fmt"
+	"os"
+	"path"
+	"runtime"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -34,6 +40,8 @@ func TestRecall_sortToken(t *testing.T) {
 	}
 
 	eng := engine.NewEngine(termDB, invertedDB, forwardDB)
+	defer eng.Close()
+
 	tests := []struct {
 		name string
 		args args
@@ -70,10 +78,7 @@ func TestRecall_Search(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{
-			name: "test1", args: args{query: "数据"}, want: nil, wantErr: false,
-		},
-		{
-			name: "test2", args: args{query: "五道口"}, want: nil, wantErr: false,
+			name: "test1", args: args{query: "五道口"}, want: nil, wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -93,4 +98,17 @@ func TestRecall_Search(t *testing.T) {
 			}
 		})
 	}
+}
+func init() {
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(os.Stdout)
+	log.SetReportCaller(true)
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: false,
+		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
+			//处理文件名
+			fileName := path.Base(frame.File)
+			return frame.Function, fmt.Sprintf("%v:%d", fileName, frame.Line)
+		},
+	})
 }
