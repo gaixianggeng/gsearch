@@ -11,6 +11,7 @@ import (
 // Index --
 type Index struct {
 	*engine.Engine
+	IndexCount uint64
 }
 
 // AddDocument 添加文档
@@ -42,6 +43,13 @@ func (in *Index) AddDocument(doc *storage.Document) error {
 				return fmt.Errorf("updatePostings err: %v", err)
 			}
 		}
+		// 更新index count
+		if in.IndexCount > 0 {
+			err := in.updateCount(in.IndexCount)
+			if err != nil {
+				return fmt.Errorf("updateCount err: %v", err)
+			}
+		}
 
 		// 重置
 		in.PostingsHashBuf = make(engine.InvertedIndexHash)
@@ -50,6 +58,19 @@ func (in *Index) AddDocument(doc *storage.Document) error {
 
 	return nil
 
+}
+
+func (in *Index) updateCount(num uint64) error {
+	count, err := in.ForwardDB.Count()
+	if err != nil {
+		if err.Error() == engine.ErrCountKeyNotFound {
+			count = 0
+		} else {
+			return fmt.Errorf("updateCount err: %v", err)
+		}
+	}
+	count += num
+	return in.ForwardDB.UpdateCount(count)
 }
 
 // 落盘
@@ -86,5 +107,5 @@ func NewIndexEngine(e *engine.Engine) (*Index, error) {
 	if e == nil {
 		return nil, fmt.Errorf("NewIndexEngine err: %v", "engine is nil")
 	}
-	return &Index{e}, nil
+	return &Index{e, 0}, nil
 }

@@ -19,7 +19,6 @@ type Engine struct {
 	PostingsHashBuf InvertedIndexHash // 倒排索引缓冲区
 	BufCount        uint64            //倒排索引缓冲区的文档数
 	BufSize         uint64
-	IndexCount      uint64
 	N               int32 // ngram
 }
 

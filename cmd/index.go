@@ -76,7 +76,7 @@ func readFile(fileName string) []string {
 	}
 	docList := strings.Split(string(content), "\n")
 	if len(docList) == 0 {
-		log.Info("readFile err: %v", "docList is empty")
+		log.Infof("readFile err: %v", "docList is empty\n")
 		return nil
 	}
 	return docList

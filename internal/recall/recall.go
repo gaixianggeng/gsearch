@@ -60,7 +60,6 @@ func (r *Recall) splitQuery2Tokens(query string) error {
 }
 
 func (r *Recall) searchDoc() (*SearchResult, error) {
-
 	r.sortToken(r.Engine.PostingsHashBuf)
 	if len(r.queryToken) == 0 {
 		return nil, fmt.Errorf("queryTokenHash is nil")
@@ -229,6 +228,11 @@ func (r *Recall) sortToken(postHash engine.InvertedIndexHash) {
 // NewRecall new
 func NewRecall(e *engine.Engine) *Recall {
 	// TODO: get doc count
-	docCount := uint64(0)
+
+	docCount, err := e.ForwardDB.Count()
+	if err != nil {
+		log.Fatalf("e.ForwardDB.Count() error:%v\n", err)
+		return nil
+	}
 	return &Recall{e, docCount, false, nil}
 }

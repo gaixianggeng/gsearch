@@ -10,6 +10,8 @@ import (
 
 const bucketName = "forward"
 
+const forwardCountKey = "forwardCount"
+
 // ForwardDB 存储器
 type ForwardDB struct {
 	db *bolt.DB
@@ -20,6 +22,21 @@ func (f *ForwardDB) Add(doc *Document) error {
 	key := strconv.Itoa(int(doc.DocID))
 	body, _ := json.Marshal(doc)
 	return Put(f.db, bucketName, []byte(key), body)
+}
+
+// Count 获取文档总数
+func (f *ForwardDB) Count() (uint64, error) {
+	body, err := Get(f.db, bucketName, []byte(forwardCountKey))
+	if err != nil {
+		return 0, err
+	}
+	c, err := strconv.Atoi(string(body))
+	return uint64(c), err
+}
+
+// UpdateCount 获取文档总数
+func (f *ForwardDB) UpdateCount(count uint64) error {
+	return Put(f.db, bucketName, []byte(forwardCountKey), []byte(strconv.Itoa(int(count))))
 }
 
 // Get get forward data
