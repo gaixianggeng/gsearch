@@ -1,0 +1,19 @@
+project = "doraemon"
+
+[owner]
+name = "gai"
+
+[source]
+files = ["../data/source.csv"]
+
+[storage]
+path = "../data/"
+
+[servers]
+[servers.alpha]
+ip = "10.0.0.1"
+role = "frontend"
+
+[servers.beta]
+ip = "10.0.0.2"
+role = "backend"

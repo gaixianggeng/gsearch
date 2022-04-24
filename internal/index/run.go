@@ -1,8 +1,8 @@
-package main
+package index
 
 import (
+	"doraemon/conf"
 	"doraemon/internal/engine"
-	"doraemon/internal/index"
 	"doraemon/internal/storage"
 	"fmt"
 	"os"
@@ -12,18 +12,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	termDB     = "../data/term.db"
-	invertedDB = "../data/inverted.db"
-	forwardDB  = "../data/forward.db"
-	sourceFile = "../data/source.csv"
+var (
+	termDB     = ".term"
+	invertedDB = ".inverted"
+	forwardDB  = ".forward"
 )
 
-// 入口
-func run() {
+const sourceFile = "source.csv"
 
+// Run 索引写入入口
+func Run(conf *conf.Config) {
 	e := engine.NewEngine(termDB, invertedDB, forwardDB)
-	index, err := index.NewIndexEngine(e)
+	index, err := NewIndexEngine(e, conf)
 	if err != nil {
 		panic(err)
 	}
@@ -31,8 +31,8 @@ func run() {
 	addDoc(index)
 }
 
-func addDoc(in *index.Index) {
-	docList := readFile(sourceFile)
+func addDoc(in *Index) {
+	docList := readFiles(in.Conf.Source.Files)
 	for _, item := range docList {
 		doc, err := doc2Struct(item)
 		if err != nil {
@@ -71,6 +71,17 @@ func doc2Struct(docStr string) (*storage.Document, error) {
 	doc.Title = d[1]
 	doc.Body = d[2]
 	return doc, nil
+}
+
+func readFiles(fileName []string) []string {
+	docList := make([]string, 0)
+	for _, sourceName := range fileName {
+		docs := readFile(sourceName)
+		if docs != nil && len(docs) > 0 {
+			docList = append(docList, docs...)
+		}
+	}
+	return docList
 }
 
 // 可改用流读取

@@ -1,6 +1,7 @@
 package index
 
 import (
+	"doraemon/conf"
 	"doraemon/internal/engine"
 	"doraemon/internal/storage"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 // Index --
 type Index struct {
 	*engine.Engine
+	Conf       *conf.Config
 	IndexCount uint64
 }
 
@@ -103,9 +105,9 @@ func (in *Index) Close() {
 }
 
 // NewIndexEngine init
-func NewIndexEngine(e *engine.Engine) (*Index, error) {
+func NewIndexEngine(e *engine.Engine, c *conf.Config) (*Index, error) {
 	if e == nil {
 		return nil, fmt.Errorf("NewIndexEngine err: %v", "engine is nil")
 	}
-	return &Index{e, 0}, nil
+	return &Index{e, c, 0}, nil
 }
