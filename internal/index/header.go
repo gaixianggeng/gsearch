@@ -1,6 +1,9 @@
 package index
 
 import (
+	"doraemon/pkg/utils"
+	"encoding/json"
+	"fmt"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -32,11 +35,24 @@ type segInfo struct {
 }
 
 // ParseHeader 解析数据
-func ParseHeader() *Header {
-	f, err := os.ReadFile(segmentsGenFile)
-	if err != nil {
-		panic(err)
+func ParseHeader() (*Header, error) {
+	// 第一次创建
+	if !utils.ExistFile(segmentsGenFile) {
+		_, err := os.Create(segmentsGenFile)
+		if err != nil {
+			return nil, fmt.Errorf("create segmentsGenFile err: %v", err)
+		}
+		return nil, nil
 	}
-	log.Debugf("seg:%s", f)
-	return nil
+	c, err := os.ReadFile(segmentsGenFile)
+	if err != nil {
+		return nil, fmt.Errorf("read file err: %v", err)
+	}
+	h := new(Header)
+	err = json.Unmarshal(c, &h)
+	if err != nil {
+		return nil, fmt.Errorf("ParseHeader err: %v", err)
+	}
+	log.Debugf("seg header :%v", h)
+	return h, nil
 }
