@@ -1,5 +1,11 @@
 package index
 
+import (
+	"os"
+
+	log "github.com/sirupsen/logrus"
+)
+
 const (
 	segmentsGenFile = "segments.gen" // 存储的元数据文件，包含各种属性信息
 )
@@ -27,7 +33,10 @@ type segInfo struct {
 
 // ParseHeader 解析数据
 func ParseHeader() *Header {
-
+	f, err := os.ReadFile(segmentsGenFile)
+	if err != nil {
+		panic(err)
+	}
+	log.Debugf("seg:%s", f)
 	return nil
-
 }
