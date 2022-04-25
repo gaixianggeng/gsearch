@@ -19,22 +19,22 @@ var (
 type Meta struct {
 	Version  string     `json:"version"`   // 版本号
 	Path     string     `json:"path"`      // 存储路径
-	NextSeg  int64      `json:"next_seg"`  // 下一个segment的命名
-	SegCount int64      `json:"seg_count"` // 当前segment的数量
-	SegInfo  []*segInfo `json:"seg_info"`  // 当前segments的信息
+	CurSeg   uint64     `json:"curr_seg"`  // 当前seg
+	NextSeg  uint64     `json:"next_seg"`  // 下一个segment的命名
+	SegCount uint64     `json:"seg_count"` // 当前segment的数量
+	SegInfo  []*SegInfo `json:"seg_info"`  // 当前segments的信息
 }
 
-// segInfo 段信息
-type segInfo struct {
-	SegName string `json:"seg_name"` // 段前缀名
-
-	SegSize          int64 `json:"seg_size"`           // 写入doc数量
-	InvertedFileSize int64 `json:"inverted_file_size"` // 写入inverted文件大小
-	ForwardFileSize  int64 `json:"forward_file_size"`  // 写入forward文件大小
-	DelSize          int64 `json:"del_size"`           // 删除文档数量
-	DelFileSize      int64 `json:"del_file_size"`      // 删除文档文件大小
-	TermSize         int64 `json:"term_size"`          // term文档文件大小
-	TermFileSize     int64 `json:"term_file_size"`     // term文件大小
+// SegInfo 段信息
+type SegInfo struct {
+	SegID            uint64 `json:"seg_name"`           // 段前缀名
+	SegSize          uint64 `json:"seg_size"`           // 写入doc数量
+	InvertedFileSize uint64 `json:"inverted_file_size"` // 写入inverted文件大小
+	ForwardFileSize  uint64 `json:"forward_file_size"`  // 写入forward文件大小
+	DelSize          uint64 `json:"del_size"`           // 删除文档数量
+	DelFileSize      uint64 `json:"del_file_size"`      // 删除文档文件大小
+	TermSize         uint64 `json:"term_size"`          // term文档文件大小
+	TermFileSize     uint64 `json:"term_file_size"`     // term文件大小
 }
 
 // ParseMeta 解析数据
@@ -70,17 +70,21 @@ func (m *Meta) SyncByTicker(ticker *time.Ticker) {
 	// defer ticker.Stop()
 	for {
 		log.Infof("ticker start:%s,seg id :%d", time.Now().Format("2006-01-02 15:04:05"), m.NextSeg)
-		m.SyncMeta()
+		err := m.SyncMeta()
+		if err != nil {
+			log.Errorf("sync meta err:%v", err)
+		}
 		<-ticker.C
 	}
 }
 
 // SyncMeta 同步元数据到文件
-func (m *Meta) SyncMeta() {
+func (m *Meta) SyncMeta() error {
 	err := writeSeg(m)
 	if err != nil {
-		log.Errorf("write seg err: %v", err)
+		return fmt.Errorf("writeSeg err: %v", err)
 	}
+	return nil
 }
 
 func readSeg(segMetaFile string) (*Meta, error) {

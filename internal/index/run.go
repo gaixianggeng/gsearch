@@ -117,7 +117,8 @@ func dbInit(meta *engine.Meta, conf *conf.Config) error {
 	termDB = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, termDBSuffix)
 	invertedDB = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, invertedDBSuffix)
 	forwardDB = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, forwardDBSuffix)
-	meta.NextSeg++
+
+	meta.CurSeg = newSeg
 
 	return nil
 

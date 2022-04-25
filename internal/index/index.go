@@ -53,12 +53,33 @@ func (in *Index) Flush() error {
 			return fmt.Errorf("updateCount err: %v", err)
 		}
 	}
+	// 更新segment meta数据
+	in.updateSegMeta()
+
 	// 重置
+	in.IndexCount = 0
 	in.PostingsHashBuf = make(engine.InvertedIndexHash)
 	in.BufCount = 0
 
 	return nil
 
+}
+
+// 更新段信息
+func (in *Index) updateSegMeta() error {
+	in.Engine.Meta.NextSeg++
+	in.Engine.Meta.SegCount++
+	in.Engine.Meta.SegInfo = append(
+		in.Engine.Meta.SegInfo,
+		&engine.SegInfo{
+			SegID:   in.Engine.Meta.CurSeg,
+			SegSize: in.IndexCount,
+		})
+	err := in.Engine.Meta.SyncMeta()
+	if err != nil {
+		return fmt.Errorf("updateSegMeta err: %v", err)
+	}
+	return nil
 }
 
 func (in *Index) updateCount(num uint64) error {
@@ -71,7 +92,6 @@ func (in *Index) updateCount(num uint64) error {
 		}
 	}
 	count += num
-	in.IndexCount = 0
 	return in.ForwardDB.UpdateCount(count)
 }
 
