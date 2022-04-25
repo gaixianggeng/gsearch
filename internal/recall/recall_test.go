@@ -1,6 +1,7 @@
 package recall
 
 import (
+	"doraemon/conf"
 	"doraemon/internal/engine"
 	"fmt"
 	"os"
@@ -39,7 +40,7 @@ func TestRecall_sortToken(t *testing.T) {
 		},
 	}
 
-	eng := engine.NewEngine(termDB, invertedDB, forwardDB)
+	eng := newEng()
 	defer eng.Close()
 
 	tests := []struct {
@@ -84,7 +85,8 @@ func TestRecall_Search(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Log("before")
-			eng := engine.NewEngine(termDB, invertedDB, forwardDB)
+
+			eng := newEng()
 			r := NewRecall(eng)
 			defer r.Close()
 
@@ -111,4 +113,19 @@ func init() {
 			return frame.Function, fmt.Sprintf("%v:%d", fileName, frame.Line)
 		},
 	})
+}
+
+func newEng() *engine.Engine {
+	c, err := conf.ReadConf("../../conf/conf.toml")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	meta, err := engine.ParseMeta(c)
+	if err != nil {
+		log.Fatal(err)
+	}
+	eng := engine.NewEngine(meta, termDB, invertedDB, forwardDB)
+	return eng
+
 }

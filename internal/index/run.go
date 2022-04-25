@@ -33,7 +33,7 @@ func Run(meta *engine.Meta, conf *conf.Config) {
 		panic(err)
 	}
 
-	e := engine.NewEngine(termDB, invertedDB, forwardDB)
+	e := engine.NewEngine(meta, termDB, invertedDB, forwardDB)
 	index, err := NewIndexEngine(e, conf)
 	if err != nil {
 		panic(err)

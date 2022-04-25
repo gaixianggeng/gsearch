@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"doraemon/conf"
+	"log"
 	"testing"
 )
 
@@ -21,7 +23,8 @@ func TestIndex_token2PostingsLists(t *testing.T) {
 		position      uint64
 		docID         uint64
 	}
-	e := NewEngine(termDB, invertedDB, forwardDB)
+
+	e := newEng()
 	if e == nil {
 		t.Errorf("new engine is nil")
 	}
@@ -100,7 +103,6 @@ func TestEngineFetchPostings(t *testing.T) {
 	type args struct {
 		token string
 	}
-	eng := NewEngine(termDB, invertedDB, forwardDB)
 	tests := []struct {
 		name    string
 		args    args
@@ -123,7 +125,7 @@ func TestEngineFetchPostings(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
+			eng := newEng()
 			got, got1, err := eng.FetchPostings(tt.args.token)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Engine.FetchPostings() error = %v, wantErr %v", err, tt.wantErr)
@@ -141,4 +143,19 @@ func TestEngineFetchPostings(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newEng() *Engine {
+	c, err := conf.ReadConf("../../conf/conf.toml")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	meta, err := ParseMeta(c)
+	if err != nil {
+		log.Fatal(err)
+	}
+	eng := NewEngine(meta, termDB, invertedDB, forwardDB)
+	return eng
+
 }

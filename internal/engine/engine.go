@@ -16,6 +16,8 @@ type Engine struct {
 	ForwardDB  *storage.ForwardDB
 	InvertedDB *storage.InvertedDB
 
+	Meta *Meta
+
 	PostingsHashBuf InvertedIndexHash // 倒排索引缓冲区
 	BufCount        uint64            //倒排索引缓冲区的文档数
 	BufSize         uint64
@@ -167,13 +169,14 @@ func (e *Engine) getTokenCount(token string) (uint64, error) {
 }
 
 // NewEngine --
-func NewEngine(termName, invertedName, forwardName string) *Engine {
+func NewEngine(meta *Meta, termName string, invertedName string, forwardName string) *Engine {
 	inverted := storage.NewInvertedDB(
 		termName, invertedName)
 	forward := storage.NewForwardDB(forwardName)
 
 	return &Engine{
 		ForwardFileName: forwardName,
+		Meta:            meta,
 		InvertedDB:      inverted,
 		ForwardDB:       forward,
 		BufSize:         1000,
