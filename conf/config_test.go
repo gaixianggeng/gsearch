@@ -12,14 +12,17 @@ func TestReadConf(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
-		{"test1", &Config{Project: "doraemon",
+		{"test1", &Config{
+			Project: "doraemon",
+			Version: "0.0.1",
 			Storage: struct {
 				Path string "toml:\"path\""
 			}{Path: "../data/"},
 			Source: struct {
 				Files []string "toml:\"files\""
 			}{
-				Files: []string{"../data/source.csv"}}}, false},
+				Files: []string{"../data/source.csv"}}},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

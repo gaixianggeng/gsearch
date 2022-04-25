@@ -5,6 +5,7 @@ import "github.com/BurntSushi/toml"
 // Config --
 type Config struct {
 	Project string `toml:"project"`
+	Version string `toml:"version"`
 	Storage struct {
 		Path string `toml:"path"`
 	} `toml:"storage"`

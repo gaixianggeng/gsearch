@@ -13,21 +13,33 @@ import (
 )
 
 var (
-	termDB     = ".term"
-	invertedDB = ".inverted"
-	forwardDB  = ".forward"
+	termDBSuffix     = ".term"
+	invertedDBSuffix = ".inverted"
+	forwardDBSuffix  = ".forward"
+)
+var (
+	termDB     = ""
+	invertedDB = ""
+	forwardDB  = ""
 )
 
 const sourceFile = "source.csv"
 
 // Run 索引写入入口
-func Run(conf *conf.Config) {
+func Run(meta *engine.Meta, conf *conf.Config) {
+
+	err := dbInit(meta, conf)
+	if err != nil {
+		panic(err)
+	}
+
 	e := engine.NewEngine(termDB, invertedDB, forwardDB)
 	index, err := NewIndexEngine(e, conf)
 	if err != nil {
 		panic(err)
 	}
 	defer index.Close()
+
 	addDoc(index)
 }
 
@@ -96,4 +108,17 @@ func readFile(fileName string) []string {
 		return nil
 	}
 	return docList
+}
+
+func dbInit(meta *engine.Meta, conf *conf.Config) error {
+
+	// 获取最新的segment id
+	newSeg := meta.NextSeg
+	termDB = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, termDBSuffix)
+	invertedDB = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, invertedDBSuffix)
+	forwardDB = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, forwardDBSuffix)
+	meta.NextSeg++
+
+	return nil
+
 }
