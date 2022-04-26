@@ -59,7 +59,10 @@ func (in *Index) Flush() error {
 	// 更新segment meta数据
 	in.updateSegMeta()
 
-	in.scheduler.mayMerge()
+	// 已存在超过2个segment，则需要判断seg是否需要merge
+	if len(in.Meta.SegInfo) > 1 {
+		in.scheduler.mayMerge(in.Meta.SegInfo[len(in.Meta.SegInfo)-1])
+	}
 
 	// 重置
 	in.IndexCount = 0

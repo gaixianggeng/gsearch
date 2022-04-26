@@ -11,7 +11,10 @@ type Config struct {
 	} `toml:"storage"`
 	Source struct {
 		Files []string `toml:"files"`
-	}
+	} `toml:"source"`
+	Merge struct {
+		ChannelSize uint64 `toml:"channel_size"`
+	} `toml:"merge"`
 }
 
 // ReadConf --

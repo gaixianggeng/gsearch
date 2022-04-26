@@ -17,6 +17,14 @@
 
 * 倒排索引文件，os.File写入，mmap读取，存储docid、positions等倒排信息，存入的位置信息存入term文件
 
+#### segment merge
+
+* channel 实现消息队列，flush后发送消息
+* term merge通过b+tree前序遍历，重组b+tree
+* 倒排表merge的话，可以通过merge b+树的时候，读取倒排表数据，进行读取后重写，效率可能会慢，待定。 
+* 需要添加segment的引用计数，为0才可以删除
+* 正排也是b+tree操作
+
 #### engine对象
 
 > engine是recall召回和index索引的控制模块
