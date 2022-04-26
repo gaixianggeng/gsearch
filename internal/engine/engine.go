@@ -203,6 +203,5 @@ func dbInit(meta *Meta, conf *conf.Config) error {
 	termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, termDBSuffix)
 	invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, invertedDBSuffix)
 	forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, forwardDBSuffix)
-	meta.NextSeg++
 	return nil
 }
