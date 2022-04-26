@@ -16,9 +16,9 @@
 
 * 倒排索引文件，os.File写入，mmap读取，存储docid、positions等倒排信息，存入的位置信息存入term文件
 
-#### engine
+#### engine对象
 
-engine是recal召回和index写入的入口
+> engine是recall召回和index索引的控制模块
 
 * 通过engine mode区分是查询还是写入，主要需要标识出要处理的segment，recall使用cur_seg_id，index使用next_seg_id
 
