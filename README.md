@@ -4,11 +4,12 @@
 
 ### 落盘存储
 
-> 使用b+数结构的bolt开源库存储
+> 使用b+数结构的[bolt](https://github.com/boltdb/bolt)开源库存储term和正排数据
+> 本来想自己手撸一个bptree，但是看了bolt的源码，我确定写不出来人家这种水平的代码，遂放弃，决定先聚焦核心功能。
 
 #### 正排库
 
-* 正排文件，通过bolt进行kv存储 docid维度
+* 正排文件，通过bolt进行kv存储 docid主键
 
 #### 倒排库
 
@@ -37,29 +38,73 @@
 
 ---
 
-## 笔记
+## NOTE
 
-### 索引构建方法
+### 功能list
 
-#### 静态索引构建
+* 索引
+
+  * [x] 创建term、正排、倒排
+
+  * [x] 分segment写入  
+
+  * [ ] segment merge
+
+  * [ ] 删除
+
+* 分词
+
+  * [x] ngaram
+
+  * [ ] ik(准备接入开源)
+
+* 召回
+
+  * [x] 短语召回
+
+  * [x] 100%match召回
+  
+  * [x] 单segment召回
+
+  * [ ] 多segment召回结果合并
+
+* 相关性
+
+  * [ ] tfidf
+
+  * [ ] bm25
+
+  * [ ] 加入词向量(看看实现难度吧...)
+
+* 效果
+
+  * [ ] and
+
+  * [ ] or
+
+  * [ ] 排序
+
+  * [ ] 分页
+
+### 记一下
+
+#### 索引构建方法
+
+静态索引构建
 
 * BSBI
 * SPIMI
 
-#### 分布式索引构建
+分布式索引构建
 
 * [MapReduce](https://static.googleusercontent.com/media/research.google.com/zh-CN//archive/bigtable-osdi06.pdf)
 
-#### 动态索引
+动态索引
 
 * 对数合并
 * lucene
 
-### 数据库
-
----
-
-### 备忘
+笔记
 
 * [snowflake](https://github.com/bwmarrin/snowflake)
 
