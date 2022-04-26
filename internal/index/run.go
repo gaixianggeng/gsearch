@@ -14,8 +14,7 @@ import (
 // Run 索引写入入口
 func Run(meta *engine.Meta, conf *conf.Config) {
 
-	e := engine.NewEngine(meta, conf)
-	index, err := NewIndexEngine(e, conf)
+	index, err := NewIndexEngine(engine.NewEngine(meta, conf, engine.IndexMode), conf)
 	if err != nil {
 		panic(err)
 	}

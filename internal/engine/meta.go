@@ -98,9 +98,9 @@ func readSeg(segMetaFile string) (*Meta, error) {
 		return nil, fmt.Errorf("ParseHeader err: %v", err)
 	}
 	log.Debugf("seg header :%v", h)
-	if h.Path != segMetaFile {
-		return nil, fmt.Errorf("segMetaFile:%s not exist", segMetaFile)
-	}
+	// if h.Path != segMetaFile {
+	// 	return nil, fmt.Errorf("segMetaFile:%s path is not equal", segMetaFile)
+	// }
 	return h, nil
 }
 

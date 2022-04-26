@@ -21,19 +21,31 @@ var (
 	forwardName  = ""
 )
 
+// Mode 查询or索引模式
+type Mode int32
+
+const (
+	// SearchMode 查询模式
+	SearchMode Mode = 1
+	// IndexMode 索引模式
+	IndexMode Mode = 2
+)
+
 // Engine 写入引擎
 type Engine struct {
-	ForwardFileName string
+	Meta *Meta
+
+	// MaxSegmentCount int64 // 最大segment数,超出就要merge
 
 	ForwardDB  *storage.ForwardDB
 	InvertedDB *storage.InvertedDB
 
-	Meta *Meta
-
 	PostingsHashBuf InvertedIndexHash // 倒排索引缓冲区
 	BufCount        uint64            //倒排索引缓冲区的文档数
 	BufSize         uint64
-	N               int32 // ngram
+
+	// query
+	N int32 // ngram
 }
 
 // PostingsList 倒排列表
@@ -156,12 +168,12 @@ func (e *Engine) FetchPostings(token string) (*PostingsList, uint64, error) {
 
 	term, err := e.InvertedDB.GetTermInfo(token)
 	if err != nil {
-		return nil, 0, fmt.Errorf("FetchPostings getForwordAddr err: %v", err)
+		return nil, 0, fmt.Errorf("FetchPostings getForwardAddr err: %v", err)
 	}
 
-	c, err := e.InvertedDB.GetForwordContent(term[1], term[2])
+	c, err := e.InvertedDB.GetDocInfo(term[1], term[2])
 	if err != nil {
-		return nil, 0, fmt.Errorf("FetchPostings getForwordContent err: %v", err)
+		return nil, 0, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
 	}
 	return decodePostings(bytes.NewBuffer(c))
 }
@@ -181,27 +193,60 @@ func (e *Engine) getTokenCount(token string) (uint64, error) {
 }
 
 // NewEngine --
-func NewEngine(meta *Meta, conf *conf.Config) *Engine {
-	dbInit(meta, conf)
-	inverted := storage.NewInvertedDB(
-		termName, invertedName)
-	forward := storage.NewForwardDB(forwardName)
+func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
+
+	inDB, forDB := dbInit(meta, conf, engineMode)
+	// inDBs, forDBs := recallDBInit(meta, conf)
 
 	return &Engine{
-		ForwardFileName: forwardName,
-		Meta:            meta,
-		InvertedDB:      inverted,
-		ForwardDB:       forward,
-		BufSize:         1000,
-		N:               2,
+		Meta:       meta,
+		InvertedDB: inDB,
+		ForwardDB:  forDB,
+		BufSize:    1000,
+		N:          2,
 	}
 
 }
-func dbInit(meta *Meta, conf *conf.Config) error {
-	// 获取最新的segment id
-	newSeg := meta.NextSeg
-	termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, termDBSuffix)
-	invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, invertedDBSuffix)
-	forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, forwardDBSuffix)
-	return nil
+func dbInit(meta *Meta, conf *conf.Config, mode Mode) (*storage.InvertedDB, *storage.ForwardDB) {
+	segID := uint64(0)
+	if mode == SearchMode {
+		segID = meta.CurSeg
+	} else if mode == IndexMode {
+		segID = meta.NextSeg
+	} else {
+		log.Fatalf("dbInit mode err: %v", mode)
+	}
+	termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, termDBSuffix)
+	invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, invertedDBSuffix)
+	forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, forwardDBSuffix)
+	log.Debugf(
+		"index:[termName:%s,invertedName:%s,forwardName:%s]",
+		termName,
+		invertedName,
+		forwardName,
+	)
+	return storage.NewInvertedDB(termName, invertedName), storage.NewForwardDB(forwardName)
+
 }
+
+// func recallDBInit(meta *Meta, conf *conf.Config) ([]*storage.InvertedDB, []*storage.ForwardDB) {
+
+// 	// 获取查询的segment ids
+// 	var inDBs []*storage.InvertedDB
+// 	var forDBs []*storage.ForwardDB
+// 	for _, segInfo := range meta.SegInfo {
+// 		newSeg := segInfo.SegID
+// 		termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, termDBSuffix)
+// 		invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, invertedDBSuffix)
+// 		forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, forwardDBSuffix)
+// 		log.Debugf(
+// 			"recall:[termName:%s,invertedName:%s,forwardName:%s]",
+// 			termName,
+// 			invertedName,
+// 			forwardName,
+// 		)
+// 		inDBs = append(inDBs, storage.NewInvertedDB(termName, invertedName))
+// 		forDBs = append(forDBs, storage.NewForwardDB(forwardName))
+// 	}
+// 	return inDBs, forDBs
+// }

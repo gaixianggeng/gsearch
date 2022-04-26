@@ -120,12 +120,13 @@ func newEng() *engine.Engine {
 	if err != nil {
 		log.Fatal(err)
 	}
+	c.Storage.Path = "../../data/"
 
 	meta, err := engine.ParseMeta(c)
 	if err != nil {
 		log.Fatal(err)
 	}
-	eng := engine.NewEngine(meta, c)
+	eng := engine.NewEngine(meta, c, engine.SearchMode)
 	return eng
 
 }

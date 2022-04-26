@@ -76,12 +76,12 @@ func (t *InvertedDB) GetTermInfo(token string) (*TermInfo, error) {
 	return &p, nil
 }
 
-// GetForwordContent 根据地址获取读取文件
-func (t *InvertedDB) GetForwordContent(offset uint64, size uint64) ([]byte, error) {
+// GetDocInfo 根据地址获取读取文件
+func (t *InvertedDB) GetDocInfo(offset uint64, size uint64) ([]byte, error) {
 	page := os.Getpagesize()
 	b, err := Mmap(int(t.file.Fd()), int64(offset/uint64(page)), int(offset+size))
 	if err != nil {
-		return nil, fmt.Errorf("GetForwordContent Mmap err: %v", err)
+		return nil, fmt.Errorf("GetDocinfo Mmap err: %v", err)
 	}
 	return b[offset : offset+size], nil
 }

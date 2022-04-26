@@ -56,7 +56,14 @@ func (r *Recall) Search(query string) (Recalls, error) {
 	if len(r.queryToken) == 0 {
 		return nil, fmt.Errorf("queryTokenHash is nil")
 	}
-	return r.searchDoc()
+
+	recall, err := r.searchDoc()
+	if err != nil {
+		log.Errorf("searchDoc err: %v", err)
+		return nil, fmt.Errorf("searchDoc err: %v", err)
+	}
+	return recall, nil
+
 }
 
 func (r *Recall) splitQuery2Tokens(query string) error {
@@ -80,7 +87,7 @@ func (r *Recall) searchDoc() (Recalls, error) {
 		if t.token == "" {
 			return nil, fmt.Errorf("token is nil")
 		}
-		postings, _, err := r.Engine.FetchPostings(t.token)
+		postings, _, err := r.FetchPostings(t.token)
 		if err != nil {
 			return nil, fmt.Errorf("fetchPostings err: %v", err)
 		}
@@ -136,11 +143,11 @@ func (r *Recall) searchDoc() (Recalls, error) {
 				r.calculateScore(cursors, uint64(tokenCount))
 			}
 			cursors[0].current = cursors[0].current.Next
-			log.Debugf("匹配召回docID:%v,nextDocID:%v,phrase:%d", docID, nextDocID, phraseCount)
+			log.Infof("匹配召回docID:%v,nextDocID:%v,phrase:%d", docID, nextDocID, phraseCount)
 			recalls = append(recalls, &SearchItem{DocID: docID, Score: score})
 		}
 	}
-	log.Debugf("recalls size:%v", len(recalls))
+	log.Infof("recalls size:%v", len(recalls))
 	return recalls, nil
 }
 
@@ -165,9 +172,9 @@ func (r *Recall) searchPhrase(queryToken []*queryTokenHash, tokenCursors []searc
 	for i, t := range queryToken {
 		for _, pos := range t.invertedIndex.PostingsList.Positions {
 			cursors[n].base = pos                                    // 记录查询中出现的位置
-			cursors[n].positions = tokenCursors[i].current.Positions // 获取token的positions
+			cursors[n].positions = tokenCursors[i].current.Positions // 获取token关联的文档中token的positions
 			cursors[n].current = &cursors[i].positions[0]            // 获取文档中出现的位置
-			cursors[n].index = 0                                     // 获取文档中出现的位置
+			cursors[n].index = 0                                     // 获取文档中出现的索引位置
 			log.Debugf("token:%s,pos:%v cur:%v,positions:%v",
 				t.token, pos, *cursors[n].current, cursors[n].positions)
 			n++
@@ -200,7 +207,9 @@ func (r *Recall) searchPhrase(queryToken []*queryTokenHash, tokenCursors []searc
 		}
 		if nextRelPos > relPos {
 			/* 不断向后读取，直到词元A的偏移量不小于next_rel_position为止 */
-			for cursors[0].current != nil && *cursors[0].current-cursors[0].base < nextRelPos {
+			for cursors[0].current != nil &&
+				*cursors[0].current-cursors[0].base < nextRelPos {
+
 				cursors[0].index++
 				if int(cursors[0].index) >= len(cursors[0].positions) {
 					log.Warnf("cursors[0].index >= len(cursors[0].positions)\n")
@@ -213,8 +222,10 @@ func (r *Recall) searchPhrase(queryToken []*queryTokenHash, tokenCursors []searc
 			// 找到短语
 			phraseCount++
 			cursors[0].index++
+			// 判断是否有下一个命中的短语
 			if int(cursors[0].index) >= len(cursors[0].positions) {
-				log.Warnf("cursors[0].index >= len(cursors[0].positions)\n")
+				log.Warnf("cursors[0].index:%d>= len(cursors[0].positions):%d",
+					cursors[0].index, len(cursors[0].positions))
 				cursors[0].current = nil
 			} else {
 				cursors[0].current = &cursors[0].positions[cursors[0].index]
@@ -244,10 +255,13 @@ func (r *Recall) sortToken(postHash engine.InvertedIndexHash) {
 
 // NewRecall new
 func NewRecall(e *engine.Engine) *Recall {
+
 	docCount, err := e.ForwardDB.Count()
 	if err != nil {
-		log.Fatalf("e.ForwardDB.Count() error:%v\n", err)
+		log.Errorf("db Count error:%v", err)
 		return nil
 	}
+	log.Infof("docCount:%d", docCount)
+
 	return &Recall{e, docCount, true, nil}
 }

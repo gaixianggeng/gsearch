@@ -24,7 +24,7 @@ func TestIndex_token2PostingsLists(t *testing.T) {
 		docID         uint64
 	}
 
-	e := newEng()
+	e := newEng(IndexMode)
 	if e == nil {
 		t.Errorf("new engine is nil")
 	}
@@ -125,7 +125,7 @@ func TestEngineFetchPostings(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			eng := newEng()
+			eng := newEng(SearchMode)
 			got, got1, err := eng.FetchPostings(tt.args.token)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Engine.FetchPostings() error = %v, wantErr %v", err, tt.wantErr)
@@ -145,7 +145,7 @@ func TestEngineFetchPostings(t *testing.T) {
 	}
 }
 
-func newEng() *Engine {
+func newEng(mode Mode) *Engine {
 	c, err := conf.ReadConf("../../conf/conf.toml")
 	if err != nil {
 		log.Fatal(err)
@@ -155,7 +155,7 @@ func newEng() *Engine {
 	if err != nil {
 		log.Fatal(err)
 	}
-	eng := NewEngine(meta, c)
+	eng := NewEngine(meta, c, mode)
 	return eng
 
 }

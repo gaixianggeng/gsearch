@@ -67,6 +67,7 @@ func (in *Index) Flush() error {
 
 // 更新段信息
 func (in *Index) updateSegMeta() error {
+	in.Engine.Meta.CurSeg = in.Engine.Meta.NextSeg
 	in.Engine.Meta.NextSeg++
 	in.Engine.Meta.SegCount++
 	in.Engine.Meta.SegInfo = append(

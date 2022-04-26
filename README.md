@@ -16,10 +16,22 @@
 
 * 倒排索引文件，os.File写入，mmap读取，存储docid、positions等倒排信息，存入的位置信息存入term文件
 
+#### engine
+
+engine是recal召回和index写入的入口
+
+* 通过engine mode区分是查询还是写入，主要需要标识出要处理的segment，recall使用cur_seg_id，index使用next_seg_id
+
+* 召回和索引是不同的engine
+
+* 召回上层有多个engine
+
+* recall 召回时会在engine上层进行多segment合并
+
 ### 文件类型
 
 * x.term存储term文件
-* x.forword存储正排文件
+* x.forward存储正排文件
 * x.inverted存储倒排索引文件
 * segments.gen 存储segment元数据信息，包括上述文件属性
 
@@ -48,15 +60,10 @@
 ---
 
 ### 备忘
+
 * [snowflake](https://github.com/bwmarrin/snowflake)
 
-
-
-
-
 * 只写入，不修改，每次根据 size 设置的阈值写入数据。
-
-* TODO: 段数量过多，需要合并: <https://github.com/gaixianggeng/doraemon/blob/fbb74b167eed900ebcb4c11e14b87541dace60e3/internal/index/index.go#L63>
 
 * 写入直接 os.File 写入，记录 offset 不会涉及到 mmap 的页读取，所以直接根据 write 量记录 offset, 初始化打开文件时，读取文件，设置 offset 即可
 
