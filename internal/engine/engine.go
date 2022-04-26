@@ -2,11 +2,23 @@ package engine
 
 import (
 	"bytes"
+	"doraemon/conf"
 	"doraemon/internal/query"
 	"doraemon/internal/storage"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	termDBSuffix     = ".term"
+	invertedDBSuffix = ".inverted"
+	forwardDBSuffix  = ".forward"
+)
+var (
+	termName     = ""
+	invertedName = ""
+	forwardName  = ""
 )
 
 // Engine 写入引擎
@@ -169,7 +181,8 @@ func (e *Engine) getTokenCount(token string) (uint64, error) {
 }
 
 // NewEngine --
-func NewEngine(meta *Meta, termName string, invertedName string, forwardName string) *Engine {
+func NewEngine(meta *Meta, conf *conf.Config) *Engine {
+	dbInit(meta, conf)
 	inverted := storage.NewInvertedDB(
 		termName, invertedName)
 	forward := storage.NewForwardDB(forwardName)
@@ -183,4 +196,13 @@ func NewEngine(meta *Meta, termName string, invertedName string, forwardName str
 		N:               2,
 	}
 
+}
+func dbInit(meta *Meta, conf *conf.Config) error {
+	// 获取最新的segment id
+	newSeg := meta.NextSeg
+	termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, termDBSuffix)
+	invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, invertedDBSuffix)
+	forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, forwardDBSuffix)
+	meta.NextSeg++
+	return nil
 }

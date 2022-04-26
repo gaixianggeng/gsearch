@@ -5,35 +5,16 @@ import (
 	"doraemon/internal/engine"
 	"doraemon/internal/storage"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	termDBSuffix     = ".term"
-	invertedDBSuffix = ".inverted"
-	forwardDBSuffix  = ".forward"
-)
-var (
-	termDB     = ""
-	invertedDB = ""
-	forwardDB  = ""
-)
-
-const sourceFile = "source.csv"
-
 // Run 索引写入入口
 func Run(meta *engine.Meta, conf *conf.Config) {
 
-	err := dbInit(meta, conf)
-	if err != nil {
-		panic(err)
-	}
-
-	e := engine.NewEngine(meta, termDB, invertedDB, forwardDB)
+	e := engine.NewEngine(meta, conf)
 	index, err := NewIndexEngine(e, conf)
 	if err != nil {
 		panic(err)
@@ -83,42 +64,4 @@ func doc2Struct(docStr string) (*storage.Document, error) {
 	doc.Title = d[1]
 	doc.Body = d[2]
 	return doc, nil
-}
-
-func readFiles(fileName []string) []string {
-	docList := make([]string, 0)
-	for _, sourceName := range fileName {
-		docs := readFile(sourceName)
-		if docs != nil && len(docs) > 0 {
-			docList = append(docList, docs...)
-		}
-	}
-	return docList
-}
-
-// 可改用流读取
-func readFile(fileName string) []string {
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		panic(err)
-	}
-	docList := strings.Split(string(content), "\n")
-	if len(docList) == 0 {
-		log.Infof("readFile err: %v", "docList is empty\n")
-		return nil
-	}
-	return docList
-}
-
-func dbInit(meta *engine.Meta, conf *conf.Config) error {
-
-	// 获取最新的segment id
-	newSeg := meta.NextSeg
-	termDB = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, termDBSuffix)
-	invertedDB = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, invertedDBSuffix)
-	forwardDB = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, forwardDBSuffix)
-	meta.NextSeg++
-
-	return nil
-
 }

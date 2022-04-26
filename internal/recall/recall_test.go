@@ -125,7 +125,7 @@ func newEng() *engine.Engine {
 	if err != nil {
 		log.Fatal(err)
 	}
-	eng := engine.NewEngine(meta, termDB, invertedDB, forwardDB)
+	eng := engine.NewEngine(meta, c)
 	return eng
 
 }
