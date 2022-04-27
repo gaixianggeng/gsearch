@@ -27,7 +27,7 @@ var dummyListNode = ListNode{Val: dummyVal}
 
 func NewLoserTreee(leaves []*ListNode) *LoserTree {
 	k := len(leaves)
-	// 只有一条数据
+	// 奇数+1
 	if k&1 == 1 {
 		leaves = append(leaves, &dummyListNode)
 		k++
@@ -42,7 +42,9 @@ func NewLoserTreee(leaves []*ListNode) *LoserTree {
 	return lt
 }
 
+// 整体逻辑 输的留下来，赢的向上比
 func (lt *LoserTree) initWinner(idx int) int {
+	log.Debugf("idx:%d", idx)
 	if idx == 0 {
 		lt.tree[0] = lt.initWinner(1)
 		return lt.tree[0]
@@ -52,15 +54,21 @@ func (lt *LoserTree) initWinner(idx int) int {
 	}
 	left := lt.initWinner(idx * 2)
 	right := lt.initWinner(idx*2 + 1)
+	log.Debugf("left:%d, right:%d", left, right)
+
+	// 为空的添加一个最大值
 	if lt.leaves[left] == nil {
 		lt.leaves[left] = &dummyListNode
 	}
 	if lt.leaves[right] == nil {
 		lt.leaves[right] = &dummyListNode
 	}
+
 	if lt.leaves[left].Val < lt.leaves[right].Val {
 		left, right = right, left
 	}
+	// 左边的节点比右边的节点大
+	// 记录败者 即 记录较大的节点索引 较小的继续向上比较
 	lt.tree[idx] = left
 	return right
 }
@@ -69,22 +77,31 @@ func (lt *LoserTree) Pop() *ListNode {
 	if len(lt.tree) == 0 {
 		return &dummyListNode
 	}
-	treeWinner := lt.tree[0]
-	winner := lt.leaves[treeWinner]
-	lt.leaves[treeWinner] = winner.Next
-	if lt.leaves[treeWinner] == nil {
-		lt.leaves[treeWinner] = &dummyListNode
+
+	// 取出最小的索引
+	leafWinIdx := lt.tree[0]
+	// 找到对应叶子节点
+	winner := lt.leaves[leafWinIdx]
+	// 更新对应index里节点的值
+	lt.leaves[leafWinIdx] = winner.Next
+	if lt.leaves[leafWinIdx] == nil {
+		lt.leaves[leafWinIdx] = &dummyListNode
 	}
-	treeIdx := (treeWinner + len(lt.tree)) / 2
+
+	// 获取父节点
+	treeIdx := (leafWinIdx + len(lt.tree)) / 2
+
 	for treeIdx != 0 {
-		treeLoser := lt.tree[treeIdx]
-		if lt.leaves[treeLoser].Val < lt.leaves[treeWinner].Val {
-			treeLoser, treeWinner = treeWinner, treeLoser
+		// 如果第二小的节点比新取出的叶子节点的值小，则互换位置
+		loserLeafIdx := lt.tree[treeIdx]
+		if lt.leaves[loserLeafIdx].Val < lt.leaves[leafWinIdx].Val {
+			loserLeafIdx, leafWinIdx = leafWinIdx, loserLeafIdx
 		}
-		lt.tree[treeIdx] = treeLoser
+		// 更新
+		lt.tree[treeIdx] = loserLeafIdx
 		treeIdx /= 2
 	}
-	lt.tree[0] = treeWinner
+	lt.tree[0] = leafWinIdx
 	return winner
 }
 
