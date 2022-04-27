@@ -133,6 +133,11 @@ func (m *MergeScheduler) newSegment() *segmentDB {
 
 func (m *MergeScheduler) mergeSegment(targetDB *segmentDB, segmentDBs []*segmentDB) {
 	log.Debugf("final prepare to merge!")
+
+	for _, seg := range segmentDBs {
+		seg.inverted
+	}
+
 }
 
 func (m *MergeScheduler) getMergeFiles(segs *MergeMessage) []*segmentName {

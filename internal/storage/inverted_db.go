@@ -86,6 +86,23 @@ func (t *InvertedDB) GetDocInfo(offset uint64, size uint64) ([]byte, error) {
 	return b[offset : offset+size], nil
 }
 
+// GetAllTerm 获取所有的term
+func (t *InvertedDB) GetAllTerm() (uint64, error) {
+	t.db.View(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		b := tx.Bucket([]byte("MyBucket"))
+
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			fmt.Printf("key=%s, value=%s\n", k, v)
+		}
+
+		return nil
+	})
+	return 0, nil
+}
+
 func (t *InvertedDB) storagePostings(postings []byte) (uint64, error) {
 	size, err := t.file.WriteAt(postings, int64(t.offset))
 	if err != nil {
