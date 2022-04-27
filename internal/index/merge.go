@@ -135,7 +135,7 @@ func (m *MergeScheduler) mergeSegment(targetDB *segmentDB, segmentDBs []*segment
 	log.Debugf("final prepare to merge!")
 
 	for _, seg := range segmentDBs {
-		seg.inverted
+		seg.inverted.GetAllTerm()
 	}
 
 }
