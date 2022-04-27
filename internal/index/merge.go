@@ -113,7 +113,7 @@ func (m *MergeScheduler) merge(segs *MergeMessage) {
 	targetSeg := m.newSegment()
 
 	// 合并
-	m.mergeSegment(targetSeg, segmentDBs)
+	m.mergeSegments(targetSeg, segmentDBs)
 }
 
 func (m *MergeScheduler) newSegment() *segmentDB {
@@ -131,13 +131,13 @@ func (m *MergeScheduler) newSegment() *segmentDB {
 	return &segmentDB{inDB, forDB}
 }
 
-func (m *MergeScheduler) mergeSegment(targetDB *segmentDB, segmentDBs []*segmentDB) {
+// 合并k个升序链表 https://leetcode-cn.com/problems/merge-k-sorted-lists/
+func (m *MergeScheduler) mergeSegments(targetDB *segmentDB, segmentDBs []*segmentDB) {
 	log.Debugf("final prepare to merge!")
 
 	for _, seg := range segmentDBs {
 		seg.inverted.GetAllTerm()
 	}
-
 }
 
 func (m *MergeScheduler) getMergeFiles(segs *MergeMessage) []*segmentName {
