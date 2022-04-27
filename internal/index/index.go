@@ -38,7 +38,11 @@ func (in *Index) AddDocument(doc *storage.Document) error {
 }
 
 // Flush 落盘操作
-func (in *Index) Flush() error {
+func (in *Index) Flush(flag ...int) error {
+	if len(in.PostingsHashBuf) == 0 {
+		log.Warnf("Flush err: %v", "in.PostingsHashBuf is empty")
+		return nil
+	}
 	log.Debugf("start storage...%v,len:%d", in.PostingsHashBuf, len(in.PostingsHashBuf))
 	// title = ""表示文件读取结束
 	for token, invertedIndex := range in.PostingsHashBuf {
@@ -57,38 +61,26 @@ func (in *Index) Flush() error {
 		}
 	}
 	// 更新segment meta数据
-	in.updateSegMeta()
+	in.Meta.UpdateSegMeta(in.IndexCount)
 
 	// 已存在超过2个segment，则需要判断seg是否需要merge
 	if len(in.Meta.SegInfo) > 1 {
-		in.scheduler.mayMerge(in.Meta.SegInfo[len(in.Meta.SegInfo)-1])
+		in.scheduler.mayMerge()
 	}
 
+	// 结束，直接退出
+	if flag != nil && len(flag) >= 0 && flag[0] == endFlag {
+		return nil
+	}
+	// 达到阈值，需要重置，写入新的segment
 	// 重置
 	in.IndexCount = 0
 	in.PostingsHashBuf = make(engine.InvertedIndexHash)
 	in.BufCount = 0
+	in.Engine = engine.NewEngine(in.Meta, in.Conf, engine.IndexMode)
 
 	return nil
 
-}
-
-// 更新段信息
-func (in *Index) updateSegMeta() error {
-	in.Engine.Meta.CurSeg = in.Engine.Meta.NextSeg
-	in.Engine.Meta.NextSeg++
-	in.Engine.Meta.SegCount++
-	in.Engine.Meta.SegInfo = append(
-		in.Engine.Meta.SegInfo,
-		&engine.SegInfo{
-			SegID:   in.Engine.Meta.CurSeg,
-			SegSize: in.IndexCount,
-		})
-	err := in.Engine.Meta.SyncMeta()
-	if err != nil {
-		return fmt.Errorf("updateSegMeta err: %v", err)
-	}
-	return nil
 }
 
 func (in *Index) updateCount(num uint64) error {
@@ -130,6 +122,7 @@ func (in *Index) updatePostings(p *engine.InvertedIndexValue) error {
 
 // Close --
 func (in *Index) Close() {
+	in.scheduler.Close()
 	in.Engine.Close()
 }
 

@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	termDBSuffix     = ".term"
-	invertedDBSuffix = ".inverted"
-	forwardDBSuffix  = ".forward"
+	TermDBSuffix     = ".term"
+	InvertedDBSuffix = ".inverted"
+	ForwardDBSuffix  = ".forward"
 )
 var (
 	termName     = ""
@@ -29,6 +29,8 @@ const (
 	SearchMode Mode = 1
 	// IndexMode 索引模式
 	IndexMode Mode = 2
+	// MergeMode seg merge模式
+	MergeMode Mode = 3
 )
 
 // Engine 写入引擎
@@ -109,6 +111,7 @@ func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
 	log.Debugf("bufInvertedHash:%v", bufInvertedHash)
 
 	if e.PostingsHashBuf != nil && len(e.PostingsHashBuf) > 0 {
+		// 合并命中相同的token的不同doc
 		MergeInvertedIndex(e.PostingsHashBuf, bufInvertedHash)
 	} else {
 		e.PostingsHashBuf = make(InvertedIndexHash)
@@ -202,7 +205,7 @@ func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
 		Meta:       meta,
 		InvertedDB: inDB,
 		ForwardDB:  forDB,
-		BufSize:    1000,
+		BufSize:    5,
 		N:          2,
 	}
 
@@ -210,15 +213,22 @@ func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
 func dbInit(meta *Meta, conf *conf.Config, mode Mode) (*storage.InvertedDB, *storage.ForwardDB) {
 	segID := uint64(0)
 	if mode == SearchMode {
-		segID = meta.CurSeg
+		for _, seg := range meta.SegInfo {
+			// 检查是否可读
+			if !seg.IsReading {
+				segID = seg.SegID
+				seg.IsReading = true
+				break
+			}
+		}
 	} else if mode == IndexMode {
 		segID = meta.NextSeg
 	} else {
 		log.Fatalf("dbInit mode err: %v", mode)
 	}
-	termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, termDBSuffix)
-	invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, invertedDBSuffix)
-	forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, forwardDBSuffix)
+	termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, TermDBSuffix)
+	invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, InvertedDBSuffix)
+	forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, ForwardDBSuffix)
 	log.Debugf(
 		"index:[termName:%s,invertedName:%s,forwardName:%s]",
 		termName,
@@ -228,25 +238,3 @@ func dbInit(meta *Meta, conf *conf.Config, mode Mode) (*storage.InvertedDB, *sto
 	return storage.NewInvertedDB(termName, invertedName), storage.NewForwardDB(forwardName)
 
 }
-
-// func recallDBInit(meta *Meta, conf *conf.Config) ([]*storage.InvertedDB, []*storage.ForwardDB) {
-
-// 	// 获取查询的segment ids
-// 	var inDBs []*storage.InvertedDB
-// 	var forDBs []*storage.ForwardDB
-// 	for _, segInfo := range meta.SegInfo {
-// 		newSeg := segInfo.SegID
-// 		termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, termDBSuffix)
-// 		invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, invertedDBSuffix)
-// 		forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, newSeg, forwardDBSuffix)
-// 		log.Debugf(
-// 			"recall:[termName:%s,invertedName:%s,forwardName:%s]",
-// 			termName,
-// 			invertedName,
-// 			forwardName,
-// 		)
-// 		inDBs = append(inDBs, storage.NewInvertedDB(termName, invertedName))
-// 		forDBs = append(forDBs, storage.NewForwardDB(forwardName))
-// 	}
-// 	return inDBs, forDBs
-// }

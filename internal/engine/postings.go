@@ -11,6 +11,7 @@ import (
 
 // MergePostings merge two postings list
 // https://leetcode-cn.com/problems/he-bing-liang-ge-pai-xu-de-lian-biao-lcof/
+// docid 排序
 func MergePostings(pa, pb *PostingsList) *PostingsList {
 	ret := new(PostingsList)
 	p := new(PostingsList)

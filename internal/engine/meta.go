@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -17,12 +18,14 @@ var (
 
 // Meta 元数据
 type Meta struct {
-	Version  string     `json:"version"`   // 版本号
-	Path     string     `json:"path"`      // 存储路径
-	CurSeg   uint64     `json:"curr_seg"`  // 当前seg
+	Version string `json:"version"` // 版本号
+	Path    string `json:"path"`    // 存储路径
+	// CurrSeg  uint64     `json:"curr_seg"`  // 当前正在使用的seg
 	NextSeg  uint64     `json:"next_seg"`  // 下一个segment的命名
 	SegCount uint64     `json:"seg_count"` // 当前segment的数量
 	SegInfo  []*SegInfo `json:"seg_info"`  // 当前segments的信息
+
+	sync.Mutex
 }
 
 // SegInfo 段信息
@@ -35,6 +38,9 @@ type SegInfo struct {
 	DelFileSize      uint64 `json:"del_file_size"`      // 删除文档文件大小
 	TermSize         uint64 `json:"term_size"`          // term文档文件大小
 	TermFileSize     uint64 `json:"term_file_size"`     // term文件大小
+	ReferenceCount   uint64 `json:"reference_count"`    // 引用计数
+	IsReading        bool   `json:"is_reading"`         // 是否正在被读取
+	IsMerging        bool   `json:"is_merging"`         // 是否正在参与合并
 }
 
 // ParseMeta 解析数据
@@ -85,6 +91,43 @@ func (m *Meta) SyncMeta() error {
 		return fmt.Errorf("writeSeg err: %v", err)
 	}
 	return nil
+}
+
+// UpdateSegMeta 更新段信息
+func (m *Meta) UpdateSegMeta(indexCount uint64) error {
+	m.Lock()
+	defer m.Unlock()
+
+	seg := &SegInfo{
+		SegID:   m.NextSeg,
+		SegSize: indexCount,
+	}
+	m.addNewSeg(seg)
+
+	err := m.SyncMeta()
+	if err != nil {
+		return fmt.Errorf("sync writeSeg err: %v", err)
+	}
+	return nil
+}
+
+// NewSegment 创建新的segment 只创建，更新nextseg，不更新currseg
+func (m *Meta) NewSegment() *SegInfo {
+	m.Lock()
+	defer m.Unlock()
+	seg := &SegInfo{
+		SegID:   m.NextSeg,
+		SegSize: 0,
+	}
+	m.addNewSeg(seg)
+	return seg
+}
+
+func (m *Meta) addNewSeg(seg *SegInfo) {
+	m.SegInfo = append(m.SegInfo, seg)
+	m.SegCount++
+	m.NextSeg++
+
 }
 
 func readSeg(segMetaFile string) (*Meta, error) {

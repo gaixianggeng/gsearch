@@ -5,7 +5,7 @@ version = "0.0.1"
 name = "gai"
 
 [source]
-files = ["../data/source.csv"]
+files = ["../source/source.csv"]
 
 [storage]
 path = "../data/"
