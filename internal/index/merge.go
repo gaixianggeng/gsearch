@@ -99,11 +99,11 @@ func (m *MergeScheduler) merge(segs *MergeMessage) {
 	log.Debugf("prepare to merge seg list:%v", segList)
 
 	// 初始化对应正排和倒排库
-	segmentDBs := make([]*segmentDB, 0)
+	segmentDBs := make([]segmentDB, 0)
 	for _, seg := range segList {
 		inDB := storage.NewInvertedDB(seg.term, seg.inverted)
 		forDB := storage.NewForwardDB(seg.forward)
-		segmentDBs = append(segmentDBs, &segmentDB{inDB, forDB})
+		segmentDBs = append(segmentDBs, segmentDB{inDB, forDB})
 	}
 	if len(segmentDBs) == 0 {
 		log.Warn("no segment to merge")
@@ -114,6 +114,33 @@ func (m *MergeScheduler) merge(segs *MergeMessage) {
 
 	// 合并
 	m.mergeSegments(targetSeg, segmentDBs)
+}
+
+// 合并k个升序链表 https://leetcode-cn.com/problems/merge-k-sorted-lists/
+func (m *MergeScheduler) mergeSegments(targetDB *segmentDB, segmentDBs []segmentDB) {
+	log.Debugf("final prepare to merge!")
+
+	termNodes := make([]*engine.TermNode, 0)
+	for _, seg := range segmentDBs {
+		termNode := new(engine.TermNode)
+
+		cursor, err := seg.inverted.GetTermCursor()
+		if err != nil {
+			log.Errorf("get cursor error: %v", err)
+			return
+		}
+
+		k, v := cursor.First()
+		log.Debugf("first term: %s", k)
+		termNode.Cursor = cursor
+		termNode.Key = k
+		termNode.Value = v
+
+		termNodes = append(termNodes, termNode)
+	}
+
+	// 合并
+	engine.MergeKSegments(termNodes)
 }
 
 func (m *MergeScheduler) newSegment() *segmentDB {
@@ -129,15 +156,6 @@ func (m *MergeScheduler) newSegment() *segmentDB {
 	inDB := storage.NewInvertedDB(term, inverted)
 	forDB := storage.NewForwardDB(forward)
 	return &segmentDB{inDB, forDB}
-}
-
-// 合并k个升序链表 https://leetcode-cn.com/problems/merge-k-sorted-lists/
-func (m *MergeScheduler) mergeSegments(targetDB *segmentDB, segmentDBs []*segmentDB) {
-	log.Debugf("final prepare to merge!")
-
-	for _, seg := range segmentDBs {
-		seg.inverted.GetAllTerm()
-	}
 }
 
 func (m *MergeScheduler) getMergeFiles(segs *MergeMessage) []*segmentName {

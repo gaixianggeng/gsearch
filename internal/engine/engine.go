@@ -10,29 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	TermDBSuffix     = ".term"
-	InvertedDBSuffix = ".inverted"
-	ForwardDBSuffix  = ".forward"
-)
-var (
-	termName     = ""
-	invertedName = ""
-	forwardName  = ""
-)
-
-// Mode 查询or索引模式
-type Mode int32
-
-const (
-	// SearchMode 查询模式
-	SearchMode Mode = 1
-	// IndexMode 索引模式
-	IndexMode Mode = 2
-	// MergeMode seg merge模式
-	MergeMode Mode = 3
-)
-
 // Engine 写入引擎
 type Engine struct {
 	Meta *Meta
@@ -48,50 +25,6 @@ type Engine struct {
 
 	// query
 	N int32 // ngram
-}
-
-// PostingsList 倒排列表
-type PostingsList struct {
-	DocID         uint64
-	Positions     []uint64
-	PositionCount uint64
-	Next          *PostingsList
-}
-
-//InvertedIndexValue 倒排索引
-type InvertedIndexValue struct {
-	Token         string
-	PostingsList  *PostingsList
-	DocCount      uint64
-	PositionCount uint64 // 查询使用，写入的时候暂时用不到
-}
-
-// InvertedIndexHash 倒排hash
-type InvertedIndexHash map[string]*InvertedIndexValue
-
-// CreateNewPostingsList 创建倒排列表
-func CreateNewPostingsList(docID uint64) *PostingsList {
-	p := new(PostingsList)
-	p.DocID = docID
-	p.PositionCount = 1
-	p.Positions = make([]uint64, 0)
-	return p
-}
-
-// CreateNewInvertedIndex 创建倒排索引
-func CreateNewInvertedIndex(token string, docCount uint64) *InvertedIndexValue {
-	p := new(InvertedIndexValue)
-	p.DocCount = docCount
-	p.Token = token
-	p.PositionCount = 0
-	p.PostingsList = new(PostingsList)
-	return p
-}
-
-// Close --
-func (e *Engine) Close() {
-	e.InvertedDB.Close()
-	e.ForwardDB.Close()
 }
 
 // Text2PostingsLists --
@@ -181,6 +114,12 @@ func (e *Engine) FetchPostings(token string) (*PostingsList, uint64, error) {
 	return decodePostings(bytes.NewBuffer(c))
 }
 
+// Close --
+func (e *Engine) Close() {
+	e.InvertedDB.Close()
+	e.ForwardDB.Close()
+}
+
 // getTokenCount 通过token获取doc数量 insert 标识是写入还是查询 写入时不为空
 func (e *Engine) getTokenCount(token string) (uint64, error) {
 	// _, c, err := e.FetchPostings(token)
@@ -197,10 +136,7 @@ func (e *Engine) getTokenCount(token string) (uint64, error) {
 
 // NewEngine --
 func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
-
 	inDB, forDB := dbInit(meta, conf, engineMode)
-	// inDBs, forDBs := recallDBInit(meta, conf)
-
 	return &Engine{
 		Meta:       meta,
 		InvertedDB: inDB,
@@ -210,6 +146,8 @@ func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
 	}
 
 }
+
+// 读取对应的segment文件下的db
 func dbInit(meta *Meta, conf *conf.Config, mode Mode) (*storage.InvertedDB, *storage.ForwardDB) {
 	segID := uint64(0)
 	if mode == SearchMode {
@@ -236,5 +174,4 @@ func dbInit(meta *Meta, conf *conf.Config, mode Mode) (*storage.InvertedDB, *sto
 		forwardName,
 	)
 	return storage.NewInvertedDB(termName, invertedName), storage.NewForwardDB(forwardName)
-
 }

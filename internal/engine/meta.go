@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	segMetaFile = "segments.gen" // 存储的元数据文件，包含各种属性信息
+	metaFile = "segments.gen" // 存储的元数据文件，包含各种属性信息
 )
 
 // Meta 元数据
@@ -28,46 +28,31 @@ type Meta struct {
 	sync.Mutex
 }
 
-// SegInfo 段信息
-type SegInfo struct {
-	SegID            uint64 `json:"seg_name"`           // 段前缀名
-	SegSize          uint64 `json:"seg_size"`           // 写入doc数量
-	InvertedFileSize uint64 `json:"inverted_file_size"` // 写入inverted文件大小
-	ForwardFileSize  uint64 `json:"forward_file_size"`  // 写入forward文件大小
-	DelSize          uint64 `json:"del_size"`           // 删除文档数量
-	DelFileSize      uint64 `json:"del_file_size"`      // 删除文档文件大小
-	TermSize         uint64 `json:"term_size"`          // term文档文件大小
-	TermFileSize     uint64 `json:"term_file_size"`     // term文件大小
-	ReferenceCount   uint64 `json:"reference_count"`    // 引用计数
-	IsReading        bool   `json:"is_reading"`         // 是否正在被读取
-	IsMerging        bool   `json:"is_merging"`         // 是否正在参与合并
-}
-
 // ParseMeta 解析数据
 func ParseMeta(c *conf.Config) (*Meta, error) {
 	// 文件不存在表示没有相关数据 第一次创建
-	segMetaFile = c.Storage.Path + segMetaFile
-	if !utils.ExistFile(segMetaFile) {
-		log.Debugf("segMetaFile:%s not exist", segMetaFile)
-		_, err := os.Create(segMetaFile)
+	metaFile = c.Storage.Path + metaFile
+	if !utils.ExistFile(metaFile) {
+		log.Debugf("segMetaFile:%s not exist", metaFile)
+		_, err := os.Create(metaFile)
 		if err != nil {
 			return nil, fmt.Errorf("create segmentsGenFile err: %v", err)
 		}
 		m := &Meta{
 			NextSeg:  0,
 			Version:  c.Version,
-			Path:     segMetaFile,
+			Path:     metaFile,
 			SegCount: 0,
 			SegInfo:  nil,
 		}
-		err = writeSeg(m)
+		err = writeMeta(m)
 		if err != nil {
 			return nil, fmt.Errorf("writeSeg err: %v", err)
 		}
 		return m, nil
 	}
 
-	return readSeg(segMetaFile)
+	return readMeta(metaFile)
 }
 
 // SyncByTicker 定时同步元数据
@@ -86,7 +71,7 @@ func (m *Meta) SyncByTicker(ticker *time.Ticker) {
 
 // SyncMeta 同步元数据到文件
 func (m *Meta) SyncMeta() error {
-	err := writeSeg(m)
+	err := writeMeta(m)
 	if err != nil {
 		return fmt.Errorf("writeSeg err: %v", err)
 	}
@@ -127,11 +112,10 @@ func (m *Meta) addNewSeg(seg *SegInfo) {
 	m.SegInfo = append(m.SegInfo, seg)
 	m.SegCount++
 	m.NextSeg++
-
 }
 
-func readSeg(segMetaFile string) (*Meta, error) {
-	metaByte, err := os.ReadFile(segMetaFile)
+func readMeta(metaFile string) (*Meta, error) {
+	metaByte, err := os.ReadFile(metaFile)
 	if err != nil {
 		return nil, fmt.Errorf("read file err: %v", err)
 	}
@@ -147,7 +131,7 @@ func readSeg(segMetaFile string) (*Meta, error) {
 	return h, nil
 }
 
-func writeSeg(m *Meta) error {
+func writeMeta(m *Meta) error {
 	f, err := os.OpenFile(m.Path, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("open file err: %v", err)

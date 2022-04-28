@@ -9,6 +9,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// PostingsList 倒排列表
+type PostingsList struct {
+	DocID         uint64
+	Positions     []uint64
+	PositionCount uint64
+	Next          *PostingsList
+}
+
 // MergePostings merge two postings list
 // https://leetcode-cn.com/problems/he-bing-liang-ge-pai-xu-de-lian-biao-lcof/
 // docid 排序
@@ -123,4 +131,13 @@ func EncodePostings(postings *PostingsList, postingsLen uint64) (*bytes.Buffer, 
 		postings = postings.Next
 	}
 	return buf, nil
+}
+
+// CreateNewPostingsList 创建倒排列表
+func CreateNewPostingsList(docID uint64) *PostingsList {
+	p := new(PostingsList)
+	p.DocID = docID
+	p.PositionCount = 1
+	p.Positions = make([]uint64, 0)
+	return p
 }

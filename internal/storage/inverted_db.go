@@ -22,8 +22,14 @@ type InvertedDB struct {
 	offset uint64
 }
 
-// TermInfo 存储的doc_count、offset、size
-type TermInfo [3]uint64
+// TermInfo term信息
+type TermInfo struct {
+	Key   []byte
+	Value []byte
+}
+
+// TermValues 存储的doc_count、offset、size
+type TermValues [3]uint64
 
 // DBUpdatePostings 倒排列表存储到数据库中
 func (t *InvertedDB) DBUpdatePostings(token string, values []byte, docCount uint64) error {
@@ -60,14 +66,14 @@ func (t *InvertedDB) Get(key []byte) (value []byte, err error) {
 	return Get(t.db, termBucket, key)
 }
 
-// GetTermInfo 获取正排地址
-func (t *InvertedDB) GetTermInfo(token string) (*TermInfo, error) {
+// GetTermInfo 获取term关联的倒排地址
+func (t *InvertedDB) GetTermInfo(token string) (*TermValues, error) {
 	c, err := t.Get([]byte(token))
 	if err != nil {
 		return nil, fmt.Errorf("GetTermInfo err:%v", err)
 	}
 
-	var p TermInfo
+	var p TermValues
 	err = binary.Read(bytes.NewBuffer(c), binary.LittleEndian, &p)
 	if err != nil {
 		return nil, fmt.Errorf("fetchPostings BinaryRead err: %v", err)
@@ -86,21 +92,16 @@ func (t *InvertedDB) GetDocInfo(offset uint64, size uint64) ([]byte, error) {
 	return b[offset : offset+size], nil
 }
 
-// GetAllTerm 获取所有的term
-func (t *InvertedDB) GetAllTerm() (uint64, error) {
+// GetTermCursor 获取遍历游标
+func (t *InvertedDB) GetTermCursor() (*bolt.Cursor, error) {
+	c := new(bolt.Cursor)
 	t.db.View(func(tx *bolt.Tx) error {
 		// Assume bucket exists and has keys
-		b := tx.Bucket([]byte("MyBucket"))
-
-		c := b.Cursor()
-
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			fmt.Printf("key=%s, value=%s\n", k, v)
-		}
-
+		b := tx.Bucket([]byte(termBucket))
+		c = b.Cursor()
 		return nil
 	})
-	return 0, nil
+	return c, nil
 }
 
 func (t *InvertedDB) storagePostings(postings []byte) (uint64, error) {
