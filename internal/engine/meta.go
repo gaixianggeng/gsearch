@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	metaFile = "segments.gen" // 存储的元数据文件，包含各种属性信息
+	metaFile = "segments.json" // 存储的元数据文件，包含各种属性信息
 )
 
 // Meta 元数据

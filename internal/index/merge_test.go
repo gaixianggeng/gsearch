@@ -45,7 +45,7 @@ func TestMergeScheduler_mayMerge(t *testing.T) {
 			m.mayMerge()
 		})
 	}
-	time.Sleep(3e9)
+	time.Sleep(30e9)
 }
 
 func init() {

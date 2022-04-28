@@ -123,18 +123,10 @@ func (m *MergeScheduler) mergeSegments(targetDB *segmentDB, segmentDBs []segment
 	termNodes := make([]*engine.TermNode, 0)
 	for _, seg := range segmentDBs {
 		termNode := new(engine.TermNode)
+		termNode.Info = make(chan storage.TermInfo)
 
-		cursor, err := seg.inverted.GetTermCursor()
-		if err != nil {
-			log.Errorf("get cursor error: %v", err)
-			return
-		}
-
-		k, v := cursor.First()
-		log.Debugf("first term: %s", k)
-		termNode.Cursor = cursor
-		termNode.Key = k
-		termNode.Value = v
+		// 开启协程遍历读取
+		go seg.inverted.GetTermCursor(termNode.Info)
 
 		termNodes = append(termNodes, termNode)
 	}
@@ -195,7 +187,7 @@ func (m *MergeScheduler) segExists(termName, invertedName, forwardName string) b
 // NewScheduleer 创建调度器
 func NewScheduleer(meta *engine.Meta, conf *conf.Config) *MergeScheduler {
 	ch := make(chan *MergeMessage, conf.Merge.ChannelSize)
-	conf.Storage.Path = "../../data/"
+	// conf.Storage.Path = "../../data/"
 
 	return &MergeScheduler{
 		Message: ch,

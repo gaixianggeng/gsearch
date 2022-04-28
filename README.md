@@ -42,7 +42,7 @@
 * x.term存储term文件
 * x.forward存储正排文件
 * x.inverted存储倒排索引文件
-* segments.gen 存储segment元数据信息，包括上述文件属性
+* segments.json 存储segment元数据信息，包括上述文件属性
 
 ---
 
