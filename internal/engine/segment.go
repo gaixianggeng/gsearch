@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"doraemon/internal/storage"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ type TermNode struct {
 	Info  chan storage.TermInfo
 	Key   []byte
 	Value []byte
+	DB    *storage.InvertedDB
 }
 
 // NewSegLoserTree 败者树
@@ -95,7 +97,7 @@ func (lt *LoserTree) initWinner(idx int) int {
 }
 
 // Pop 弹出最小值
-func (lt *LoserTree) Pop() *storage.TermInfo {
+func (lt *LoserTree) Pop() *TermNode {
 	if len(lt.tree) == 0 {
 		return nil
 	}
@@ -105,23 +107,26 @@ func (lt *LoserTree) Pop() *storage.TermInfo {
 	// 找到对应叶子节点
 	winner := lt.leaves[leafWinIdx]
 
-	termInfo := new(storage.TermInfo)
+	target := new(TermNode)
 
 	// 更新对应index里节点的值
 	// 如果是最后一个节点，标识nil
 	if winner == nil {
 		log.Debugf("数据已读取完毕 winner.Key == nil")
 		lt.leaves[leafWinIdx] = nil
+		target = nil
 	} else {
 		log.Debugf("winner:%s", winner.Key)
 		// 赋值
-		termInfo.Key = winner.Key
-		termInfo.Value = winner.Value
+		target.Key = winner.Key
+		target.Value = winner.Value
+		target.DB = winner.DB
 
 		// 获取下一轮的key和value
 		termCh, isOpen := <-winner.Info
 		// channel已关闭
 		if !isOpen {
+			log.Debugf("channel已关闭")
 			lt.leaves[leafWinIdx] = nil
 		} else {
 			// 重新赋值
@@ -156,11 +161,11 @@ func (lt *LoserTree) Pop() *storage.TermInfo {
 
 	time.Sleep(1e8)
 
-	return termInfo
+	return target
 }
 
 // MergeKSegments 多路归并
-func MergeKSegments(lists []*TermNode) {
+func MergeKSegments(lists []*TermNode) InvertedIndexHash {
 	// var dummy = &ListNode{}
 	// pre := dummy
 	log.Debugf("start merge k segemnts[lists:%v]", lists)
@@ -170,15 +175,40 @@ func MergeKSegments(lists []*TermNode) {
 	log.Debugf("init:%+v", lt)
 
 	log.Debugf(strings.Repeat("-", 20))
+	res := make(InvertedIndexHash)
 	for {
 		node := lt.Pop()
 		if node == nil {
 			break
 		}
-		log.Debugf("pop node:%+v", string(node.Key))
+		val, err := node.DB.Bytes2TermVal(node.Value)
+		if err != nil {
+			log.Errorf("bytes2termval err:%s", err)
+			continue
+		}
+		// 解码
+		c, err := node.DB.GetDocInfo(val[1], val[2])
+		if err != nil {
+			log.Errorf("FetchPostings getDocInfo err: %v", err)
+			continue
+		}
+		pos, count, err := decodePostings(bytes.NewBuffer(c))
+
+		log.Debugf("pop node key:%+v,value:%v,count:%d", string(node.Key), val, count)
 		log.Debugf(strings.Repeat("-", 20))
+
+		if p, ok := res[string(node.Key)]; ok {
+			p.DocCount += count
+			p.PostingsList = MergePostings(p.PostingsList, pos)
+			continue
+		}
+		res[string(node.Key)] = &InvertedIndexValue{
+			Token:        string(node.Key),
+			DocCount:     count,
+			PostingsList: pos,
+		}
 		// pre.Next = node
 		// pre = node
 	}
-	return
+	return res
 }

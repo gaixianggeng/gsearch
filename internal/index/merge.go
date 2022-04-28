@@ -5,6 +5,7 @@ import (
 	"doraemon/internal/engine"
 	"doraemon/internal/storage"
 	"doraemon/pkg/utils"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -124,6 +125,7 @@ func (m *MergeScheduler) mergeSegments(targetDB *segmentDB, segmentDBs []segment
 	for _, seg := range segmentDBs {
 		termNode := new(engine.TermNode)
 		termNode.Info = make(chan storage.TermInfo)
+		termNode.DB = seg.inverted
 
 		// 开启协程遍历读取
 		go seg.inverted.GetTermCursor(termNode.Info)
@@ -132,7 +134,14 @@ func (m *MergeScheduler) mergeSegments(targetDB *segmentDB, segmentDBs []segment
 	}
 
 	// 合并
-	engine.MergeKSegments(termNodes)
+	res := engine.MergeKSegments(termNodes)
+
+	for token, pos := range res {
+		c, _ := json.Marshal(pos)
+		log.Infof("token:%s count:%d,pos:%s", token, pos.DocCount, c)
+		//TODO: 落盘方法需要抽象
+
+	}
 }
 
 func (m *MergeScheduler) newSegment() *segmentDB {
