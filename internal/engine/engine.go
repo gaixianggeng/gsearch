@@ -12,8 +12,8 @@ import (
 
 // Engine 写入引擎
 type Engine struct {
-	Meta *Meta
-
+	Meta      *Meta
+	CurrSegID SegID //当前engine关联的segID
 	// MaxSegmentCount int64 // 最大segment数,超出就要merge
 
 	ForwardDB  *storage.ForwardDB
@@ -112,6 +112,23 @@ func (e *Engine) FetchPostings(token string) (*PostingsList, uint64, error) {
 		return nil, 0, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
 	}
 	return decodePostings(bytes.NewBuffer(c))
+
+}
+
+// StoragePostings 落盘
+func (e *Engine) StoragePostings(p *InvertedIndexValue) error {
+	if p == nil {
+		return fmt.Errorf("updatePostings p is nil")
+	}
+
+	// 编码
+	buf, err := EncodePostings(p.PostingsList, p.DocCount)
+	if err != nil {
+		return fmt.Errorf("updatePostings encodePostings err: %v", err)
+	}
+
+	// 开始写入数据库
+	return e.InvertedDB.StoragePostings(p.Token, buf.Bytes(), p.DocCount)
 }
 
 // Close --
@@ -135,10 +152,12 @@ func (e *Engine) getTokenCount(token string) (uint64, error) {
 }
 
 // NewEngine --
+// 每次初始化的时候调整meta数据
 func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
-	inDB, forDB := dbInit(meta, conf, engineMode)
+	segID, inDB, forDB := dbInit(meta, conf, engineMode)
 	return &Engine{
 		Meta:       meta,
+		CurrSegID:  segID,
 		InvertedDB: inDB,
 		ForwardDB:  forDB,
 		BufSize:    5,
@@ -148,8 +167,8 @@ func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
 }
 
 // 读取对应的segment文件下的db
-func dbInit(meta *Meta, conf *conf.Config, mode Mode) (*storage.InvertedDB, *storage.ForwardDB) {
-	segID := uint64(0)
+func dbInit(meta *Meta, conf *conf.Config, mode Mode) (SegID, *storage.InvertedDB, *storage.ForwardDB) {
+	var segID SegID
 	if mode == SearchMode {
 		for _, seg := range meta.SegInfo {
 			// 检查是否可读
@@ -161,8 +180,10 @@ func dbInit(meta *Meta, conf *conf.Config, mode Mode) (*storage.InvertedDB, *sto
 		}
 	} else if mode == IndexMode {
 		segID = meta.NextSeg
-	} else {
-		log.Fatalf("dbInit mode err: %v", mode)
+		meta.NewSegment()
+	} else if mode == MergeMode {
+		segID = meta.NextSeg
+		meta.NewSegment()
 	}
 	termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, TermDBSuffix)
 	invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, InvertedDBSuffix)
@@ -173,5 +194,5 @@ func dbInit(meta *Meta, conf *conf.Config, mode Mode) (*storage.InvertedDB, *sto
 		invertedName,
 		forwardName,
 	)
-	return storage.NewInvertedDB(termName, invertedName), storage.NewForwardDB(forwardName)
+	return segID, storage.NewInvertedDB(termName, invertedName), storage.NewForwardDB(forwardName)
 }

@@ -47,7 +47,7 @@ func (in *Index) Flush(flag ...int) error {
 	// title = ""表示文件读取结束
 	for token, invertedIndex := range in.PostingsHashBuf {
 		log.Debugf("token:%s,invertedIndex:%v\n", token, invertedIndex)
-		err := in.updatePostings(invertedIndex)
+		err := in.StoragePostings(invertedIndex)
 		if err != nil {
 			log.Errorf("updatePostings err: %v", err)
 			return fmt.Errorf("updatePostings err: %v", err)
@@ -61,7 +61,7 @@ func (in *Index) Flush(flag ...int) error {
 		}
 	}
 	// 更新segment meta数据
-	in.Meta.UpdateSegMeta(in.IndexCount)
+	in.Meta.UpdateSegMeta(in.CurrSegID, in.IndexCount)
 
 	// 已存在超过2个segment，则需要判断seg是否需要merge
 	if len(in.Meta.SegInfo) > 1 {
@@ -94,30 +94,6 @@ func (in *Index) updateCount(num uint64) error {
 	}
 	count += num
 	return in.ForwardDB.UpdateCount(count)
-}
-
-// 落盘
-func (in *Index) updatePostings(p *engine.InvertedIndexValue) error {
-	if p == nil {
-		return fmt.Errorf("updatePostings p is nil")
-	}
-	// 不需要拉取后merge，直接写入文件
-	// // 拉取数据库数据
-	// oldPostings, size, err := in.FetchPostings(p.Token)
-	// if err != nil {
-	// 	return fmt.Errorf("updatePostings fetchPostings err: %v", err)
-	// }
-	// // merge
-	// if size > 0 {
-	// 	p.PostingsList = engine.MergePostings(oldPostings, p.PostingsList)
-	// 	p.DocsCount += size
-	// }
-	// 开始写入数据库
-	buf, err := engine.EncodePostings(p.PostingsList, p.DocCount)
-	if err != nil {
-		return fmt.Errorf("updatePostings encodePostings err: %v", err)
-	}
-	return in.InvertedDB.DBUpdatePostings(p.Token, buf.Bytes(), p.DocCount)
 }
 
 // Close --

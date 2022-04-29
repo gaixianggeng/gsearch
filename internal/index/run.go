@@ -16,6 +16,7 @@ const endFlag = 1
 // Run 索引写入入口
 func Run(meta *engine.Meta, conf *conf.Config) {
 
+	log.Infof("index run...")
 	index, err := NewIndexEngine(engine.NewEngine(meta, conf, engine.IndexMode), conf)
 	if err != nil {
 		panic(err)
@@ -26,6 +27,7 @@ func Run(meta *engine.Meta, conf *conf.Config) {
 }
 
 func addDoc(in *Index) {
+	log.Infof("addDoc start")
 	docList := readFiles(in.Conf.Source.Files)
 	for _, item := range docList {
 		doc, err := doc2Struct(item)

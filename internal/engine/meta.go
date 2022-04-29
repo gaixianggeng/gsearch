@@ -16,14 +16,16 @@ var (
 	metaFile = "segments.json" // 存储的元数据文件，包含各种属性信息
 )
 
+// SegID --
+type SegID uint64
+
 // Meta 元数据
 type Meta struct {
-	Version string `json:"version"` // 版本号
-	Path    string `json:"path"`    // 存储路径
-	// CurrSeg  uint64     `json:"curr_seg"`  // 当前正在使用的seg
-	NextSeg  uint64     `json:"next_seg"`  // 下一个segment的命名
-	SegCount uint64     `json:"seg_count"` // 当前segment的数量
-	SegInfo  []*SegInfo `json:"seg_info"`  // 当前segments的信息
+	Version  string             `json:"version"`   // 版本号
+	Path     string             `json:"path"`      // 存储路径
+	NextSeg  SegID              `json:"next_seg"`  // 下一个segmentid,永远表示下一个新建的segment,seginfos中不存在
+	SegCount uint64             `json:"seg_count"` // 当前segment的数量
+	SegInfo  map[SegID]*SegInfo `json:"seg_info"`  // 当前segments的信息
 
 	sync.Mutex
 }
@@ -43,7 +45,7 @@ func ParseMeta(c *conf.Config) (*Meta, error) {
 			Version:  c.Version,
 			Path:     metaFile,
 			SegCount: 0,
-			SegInfo:  nil,
+			SegInfo:  make(map[SegID]*SegInfo, 0),
 		}
 		err = writeMeta(m)
 		if err != nil {
@@ -60,7 +62,7 @@ func (m *Meta) SyncByTicker(ticker *time.Ticker) {
 	// 清理计时器
 	// defer ticker.Stop()
 	for {
-		log.Infof("ticker start:%s,seg id :%d", time.Now().Format("2006-01-02 15:04:05"), m.NextSeg)
+		log.Infof("ticker start:%s,next seg id :%d", time.Now().Format("2006-01-02 15:04:05"), m.NextSeg)
 		err := m.SyncMeta()
 		if err != nil {
 			log.Errorf("sync meta err:%v", err)
@@ -79,16 +81,14 @@ func (m *Meta) SyncMeta() error {
 }
 
 // UpdateSegMeta 更新段信息
-func (m *Meta) UpdateSegMeta(indexCount uint64) error {
+func (m *Meta) UpdateSegMeta(segID SegID, indexCount uint64) error {
 	m.Lock()
 	defer m.Unlock()
 
-	seg := &SegInfo{
-		SegID:   m.NextSeg,
-		SegSize: indexCount,
+	if _, ok := m.SegInfo[segID]; !ok {
+		return fmt.Errorf("seg:%d is not exist", segID)
 	}
-	m.addNewSeg(seg)
-
+	m.SegInfo[segID].SegSize = indexCount
 	err := m.SyncMeta()
 	if err != nil {
 		return fmt.Errorf("sync writeSeg err: %v", err)
@@ -97,21 +97,29 @@ func (m *Meta) UpdateSegMeta(indexCount uint64) error {
 }
 
 // NewSegment 创建新的segment 只创建，更新nextseg，不更新currseg
-func (m *Meta) NewSegment() *SegInfo {
+func (m *Meta) NewSegment() (*SegInfo, error) {
 	m.Lock()
 	defer m.Unlock()
+	log.Debugf("new segment:%d", m.NextSeg)
 	seg := &SegInfo{
 		SegID:   m.NextSeg,
 		SegSize: 0,
 	}
-	m.addNewSeg(seg)
-	return seg
+	err := m.addNewSeg(seg)
+	if err != nil {
+		return nil, fmt.Errorf("addNewSeg err: %v", err)
+	}
+	return seg, nil
 }
 
-func (m *Meta) addNewSeg(seg *SegInfo) {
-	m.SegInfo = append(m.SegInfo, seg)
+func (m *Meta) addNewSeg(seg *SegInfo) error {
+	if _, ok := m.SegInfo[SegID(seg.SegID)]; ok {
+		return fmt.Errorf("seg:%d is exist", seg.SegID)
+	}
+	m.SegInfo[SegID(seg.SegID)] = seg
 	m.SegCount++
 	m.NextSeg++
+	return nil
 }
 
 func readMeta(metaFile string) (*Meta, error) {
@@ -132,7 +140,8 @@ func readMeta(metaFile string) (*Meta, error) {
 }
 
 func writeMeta(m *Meta) error {
-	f, err := os.OpenFile(m.Path, os.O_WRONLY|os.O_CREATE, 0644)
+	m.Path = "../../data/segments.json"
+	f, err := os.OpenFile(m.Path, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0766)
 	if err != nil {
 		return fmt.Errorf("open file err: %v", err)
 	}

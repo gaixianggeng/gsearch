@@ -3,6 +3,7 @@ package engine
 import (
 	"bytes"
 	"doraemon/internal/storage"
+	"fmt"
 	"strings"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 
 // SegInfo 段信息
 type SegInfo struct {
-	SegID            uint64 `json:"seg_name"`           // 段前缀名
+	SegID            SegID  `json:"seg_name"`           // 段前缀名
 	SegSize          uint64 `json:"seg_size"`           // 写入doc数量
 	InvertedFileSize uint64 `json:"inverted_file_size"` // 写入inverted文件大小
 	ForwardFileSize  uint64 `json:"forward_file_size"`  // 写入forward文件大小
@@ -165,16 +166,10 @@ func (lt *LoserTree) Pop() *TermNode {
 }
 
 // MergeKSegments 多路归并
-func MergeKSegments(lists []*TermNode) InvertedIndexHash {
+func MergeKSegments(lists []*TermNode) (InvertedIndexHash, error) {
 	// var dummy = &ListNode{}
 	// pre := dummy
-	log.Debugf("start merge k segemnts[lists:%v]", lists)
 	lt := NewSegLoserTree(lists)
-	log.Debugf("init:%s,%s", string(lt.leaves[0].Key), string(lt.leaves[1].Key))
-
-	log.Debugf("init:%+v", lt)
-
-	log.Debugf(strings.Repeat("-", 20))
 	res := make(InvertedIndexHash)
 	for {
 		node := lt.Pop()
@@ -183,14 +178,12 @@ func MergeKSegments(lists []*TermNode) InvertedIndexHash {
 		}
 		val, err := node.DB.Bytes2TermVal(node.Value)
 		if err != nil {
-			log.Errorf("bytes2termval err:%s", err)
-			continue
+			return nil, fmt.Errorf("bytes2termval err:%s", err)
 		}
 		// 解码
 		c, err := node.DB.GetDocInfo(val[1], val[2])
 		if err != nil {
-			log.Errorf("FetchPostings getDocInfo err: %v", err)
-			continue
+			return nil, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
 		}
 		pos, count, err := decodePostings(bytes.NewBuffer(c))
 
@@ -210,5 +203,5 @@ func MergeKSegments(lists []*TermNode) InvertedIndexHash {
 		// pre.Next = node
 		// pre = node
 	}
-	return res
+	return res, nil
 }

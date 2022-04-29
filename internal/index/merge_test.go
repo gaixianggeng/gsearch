@@ -34,6 +34,10 @@ func TestMergeScheduler_mayMerge(t *testing.T) {
 
 	go m.Merge()
 
+	ticker := time.NewTicker(time.Second * 1)
+	go meta.SyncByTicker(ticker)
+	defer ticker.Stop()
+
 	tests := []struct {
 		name string
 	}{

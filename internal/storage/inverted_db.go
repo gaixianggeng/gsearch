@@ -31,8 +31,8 @@ type TermInfo struct {
 // TermValues 存储的doc_count、offset、size
 type TermValues [3]uint64
 
-// DBUpdatePostings 倒排列表存储到数据库中
-func (t *InvertedDB) DBUpdatePostings(token string, values []byte, docCount uint64) error {
+// StoragePostings 倒排列表存储到数据库中
+func (t *InvertedDB) StoragePostings(token string, values []byte, docCount uint64) error {
 	// 写入file，获取写入的size
 	size, err := t.storagePostings(values)
 	if err != nil {
@@ -148,6 +148,7 @@ func NewInvertedDB(termName, postingsName string) *InvertedDB {
 		log.Fatal(err)
 	}
 
+	log.Debugf("start op bolt:%s", termName)
 	db, err := bolt.Open(termName, 0600, nil)
 	if err != nil {
 		log.Fatal(err)
