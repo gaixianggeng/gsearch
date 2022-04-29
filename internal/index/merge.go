@@ -7,6 +7,7 @@ import (
 	"doraemon/pkg/utils"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -97,10 +98,6 @@ func (m *MergeScheduler) merge(segs *MergeMessage) error {
 
 	log.Debugf("merge segs: %v", segs)
 
-	// 获取merge的文件
-	segList, docSize := m.getMergeFiles(segs)
-	log.Debugf("prepare to merge seg list:%v", segList)
-
 	// 恢复seg is_merging状态
 	defer func() {
 		for _, seg := range ([]*engine.SegInfo)(*segs) {
@@ -112,7 +109,7 @@ func (m *MergeScheduler) merge(segs *MergeMessage) error {
 	}()
 
 	// 合并
-	err := m.mergeSegments(segList, docSize)
+	err := m.mergeSegments(segs)
 	if err != nil {
 		return err
 	}
@@ -120,10 +117,14 @@ func (m *MergeScheduler) merge(segs *MergeMessage) error {
 }
 
 // 合并k个升序链表 https://leetcode-cn.com/problems/merge-k-sorted-lists/
-func (m *MergeScheduler) mergeSegments(segList []*segmentName, docSize uint64) error {
+func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
+	// 获取merge的文件
+	segMap, docSize := m.getMergeFiles(segs)
+	log.Debugf("prepare to merge seg list:%v", segMap)
+
 	// 初始化对应正排和倒排库
 	segmentDBs := make([]segmentDB, 0)
-	for _, seg := range segList {
+	for _, seg := range segMap {
 		inDB := storage.NewInvertedDB(seg.term, seg.inverted)
 		forDB := storage.NewForwardDB(seg.forward)
 		segmentDBs = append(segmentDBs, segmentDB{inDB, forDB})
@@ -132,7 +133,7 @@ func (m *MergeScheduler) mergeSegments(segList []*segmentName, docSize uint64) e
 		log.Warn("no segment to merge")
 		return nil
 	}
-	log.Debugf("final prepare to merge[%v]!", segList)
+	log.Debugf("final prepare to merge[%v]!", segMap)
 
 	termNodes := make([]*engine.TermNode, 0)
 	for _, seg := range segmentDBs {
@@ -165,13 +166,57 @@ func (m *MergeScheduler) mergeSegments(segList []*segmentName, docSize uint64) e
 	}
 	m.Meta.UpdateSegMeta(targetEng.CurrSegID, docSize)
 
+	// delete old segs
+	err = m.deleteOldSeg(segMap)
+	if err != nil {
+		log.Errorf("delete old seg error: %v", err)
+		return err
+	}
 	// 删除seginfo里的旧segemnts
 	return nil
 }
 
-func (m *MergeScheduler) getMergeFiles(segs *MergeMessage) ([]*segmentName, uint64) {
+func (m *MergeScheduler) deleteOldSeg(segMap map[engine.SegID]*segmentName) error {
 
-	segList := make([]*segmentName, 0)
+	for segID, segName := range segMap {
+		if s, ok := m.Meta.SegInfo[segID]; ok {
+			s.IsMerging = false
+			delete(m.Meta.SegInfo, segID)
+			err := m.deleteSegFile(segName)
+			if err != nil {
+				log.Errorf("delete old seg error: %v", err)
+				return err
+			}
+
+		} else {
+			return fmt.Errorf("delete old seg error: %v", segID)
+		}
+	}
+	return nil
+}
+
+func (m *MergeScheduler) deleteSegFile(segName *segmentName) error {
+	log.Debugf("delete seg file ford:%s,invert:%s,term:%s",
+		segName.forward, segName.inverted, segName.term)
+	err := os.Remove(segName.inverted)
+	if err != nil {
+		return err
+	}
+	os.Remove(segName.term)
+	if err != nil {
+		return err
+	}
+	os.Remove(segName.forward)
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (m *MergeScheduler) getMergeFiles(segs *MergeMessage) (map[engine.SegID]*segmentName, uint64) {
+
+	segMap := make(map[engine.SegID]*segmentName, 0)
 	docSize := uint64(0)
 	for _, seg := range []*engine.SegInfo(*segs) {
 		if seg.IsMerging {
@@ -192,10 +237,11 @@ func (m *MergeScheduler) getMergeFiles(segs *MergeMessage) ([]*segmentName, uint
 		segName.forward = forward
 		segName.inverted = inverted
 		segName.term = term
-		segList = append(segList, segName)
+		segMap[seg.SegID] = segName
+
 		docSize += seg.SegSize
 	}
-	return segList, docSize
+	return segMap, docSize
 
 }
 
