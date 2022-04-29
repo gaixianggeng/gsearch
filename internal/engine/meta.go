@@ -21,8 +21,8 @@ type SegID uint64
 
 // Meta 元数据
 type Meta struct {
-	Version  string             `json:"version"`   // 版本号
-	Path     string             `json:"path"`      // 存储路径
+	Version  string             `json:"version"` // 版本号
+	path     string             // 存储路径
 	NextSeg  SegID              `json:"next_seg"`  // 下一个segmentid,永远表示下一个新建的segment,seginfos中不存在
 	SegCount uint64             `json:"seg_count"` // 当前segment的数量
 	SegInfo  map[SegID]*SegInfo `json:"seg_info"`  // 当前segments的信息
@@ -43,8 +43,8 @@ func ParseMeta(c *conf.Config) (*Meta, error) {
 		m := &Meta{
 			NextSeg:  0,
 			Version:  c.Version,
-			Path:     metaFile,
 			SegCount: 0,
+			path:     metaFile,
 			SegInfo:  make(map[SegID]*SegInfo, 0),
 		}
 		err = writeMeta(m)
@@ -133,15 +133,12 @@ func readMeta(metaFile string) (*Meta, error) {
 		return nil, fmt.Errorf("ParseHeader err: %v", err)
 	}
 	log.Debugf("seg header :%v", h)
-	// if h.Path != segMetaFile {
-	// 	return nil, fmt.Errorf("segMetaFile:%s path is not equal", segMetaFile)
-	// }
+	h.path = metaFile
 	return h, nil
 }
 
 func writeMeta(m *Meta) error {
-	m.Path = "../../data/segments.json"
-	f, err := os.OpenFile(m.Path, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0766)
+	f, err := os.OpenFile(m.path, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0766)
 	if err != nil {
 		return fmt.Errorf("open file err: %v", err)
 	}

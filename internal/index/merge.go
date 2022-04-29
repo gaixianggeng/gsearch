@@ -117,6 +117,8 @@ func (m *MergeScheduler) merge(segs *MergeMessage) error {
 }
 
 // 合并k个升序链表 https://leetcode-cn.com/problems/merge-k-sorted-lists/
+// term表需要合并k个升序，以及处理对应的倒排数据
+// 正排表直接merge即可
 func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 	// 获取merge的文件
 	segMap, docSize := m.getMergeFiles(segs)
@@ -148,7 +150,7 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 	}
 
 	// 合并
-	res, err := engine.MergeKSegments(termNodes)
+	res, err := engine.MergeKTermSegments(termNodes)
 	if err != nil {
 		log.Errorf("merge error: %v", err)
 		return err
@@ -164,7 +166,13 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 			return err
 		}
 	}
-	m.Meta.UpdateSegMeta(targetEng.CurrSegID, docSize)
+
+	// update meta info
+	err = m.Meta.UpdateSegMeta(targetEng.CurrSegID, docSize)
+	if err != nil {
+		log.Errorf("update seg meta err:%v", err)
+		return err
+	}
 
 	// delete old segs
 	err = m.deleteOldSeg(segMap)

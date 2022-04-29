@@ -38,7 +38,7 @@ type TermNode struct {
 	Info  chan storage.TermInfo
 	Key   []byte
 	Value []byte
-	DB    *storage.InvertedDB
+	DB    *storage.InvertedDB // 主要用来调用intervted的相关方法
 }
 
 // NewSegLoserTree 败者树
@@ -165,12 +165,13 @@ func (lt *LoserTree) Pop() *TermNode {
 	return target
 }
 
-// MergeKSegments 多路归并
-func MergeKSegments(lists []*TermNode) (InvertedIndexHash, error) {
-	// var dummy = &ListNode{}
-	// pre := dummy
+// MergeKTermSegments 多路归并，合并term数据，合并后需要一起处理合并倒排表数据
+func MergeKTermSegments(lists []*TermNode) (InvertedIndexHash, error) {
+	// 初始化
 	lt := NewSegLoserTree(lists)
+
 	res := make(InvertedIndexHash)
+
 	for {
 		node := lt.Pop()
 		if node == nil {
@@ -200,8 +201,44 @@ func MergeKSegments(lists []*TermNode) (InvertedIndexHash, error) {
 			DocCount:     count,
 			PostingsList: pos,
 		}
-		// pre.Next = node
-		// pre = node
 	}
 	return res, nil
 }
+
+// // MergeKForwardSegments 合并正排
+// func MergeKForwardSegments(targetDB *storage.ForwardDB, lists []*TermNode) (InvertedIndexHash, error) {
+// 	// 初始化
+// 	lt := NewSegLoserTree(lists)
+
+// 	for {
+// 		node := lt.Pop()
+// 		if node == nil {
+// 			break
+// 		}
+// 		val, err := node.DB.Bytes2TermVal(node.Value)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("bytes2termval err:%s", err)
+// 		}
+// 		// 解码
+// 		c, err := node.DB.GetDocInfo(val[1], val[2])
+// 		if err != nil {
+// 			return nil, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
+// 		}
+// 		pos, count, err := decodePostings(bytes.NewBuffer(c))
+
+// 		log.Debugf("pop node key:%+v,value:%v,count:%d", string(node.Key), val, count)
+// 		log.Debugf(strings.Repeat("-", 20))
+
+// 		if p, ok := res[string(node.Key)]; ok {
+// 			p.DocCount += count
+// 			p.PostingsList = MergePostings(p.PostingsList, pos)
+// 			continue
+// 		}
+// 		res[string(node.Key)] = &InvertedIndexValue{
+// 			Token:        string(node.Key),
+// 			DocCount:     count,
+// 			PostingsList: pos,
+// 		}
+// 	}
+// 	return res, nil
+// }
