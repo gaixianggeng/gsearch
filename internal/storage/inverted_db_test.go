@@ -23,7 +23,7 @@ func TestInvertedDB_GetTermInfo(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
-		{"test1", args{"数据"}, &TermValues{2, 0, 64}, false},
+		{"test1", args{"ab"}, &TermValues{2, 0, 64}, false},
 	}
 
 	for _, tt := range tests {

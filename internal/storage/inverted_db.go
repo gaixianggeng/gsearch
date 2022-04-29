@@ -22,8 +22,8 @@ type InvertedDB struct {
 	offset uint64
 }
 
-// TermInfo term信息
-type TermInfo struct {
+// KvInfo term信息
+type KvInfo struct {
 	Key   []byte
 	Value []byte
 }
@@ -86,7 +86,7 @@ func (t *InvertedDB) GetDocInfo(offset uint64, size uint64) ([]byte, error) {
 }
 
 // GetTermCursor 获取遍历游标
-func (t *InvertedDB) GetTermCursor(termCh chan TermInfo) {
+func (t *InvertedDB) GetTermCursor(termCh chan KvInfo) {
 	t.db.View(func(tx *bolt.Tx) error {
 		// Assume bucket exists and has keys
 		b := tx.Bucket([]byte(termBucket))
@@ -97,9 +97,8 @@ func (t *InvertedDB) GetTermCursor(termCh chan TermInfo) {
 		// close(termCh)
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			termCh <- TermInfo{k, v}
+			termCh <- KvInfo{k, v}
 		}
-		log.Debugf("------end")
 		close(termCh)
 		return nil
 	})

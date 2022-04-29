@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -138,21 +139,30 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 	log.Debugf("final prepare to merge[%v]!", segMap)
 
 	termNodes := make([]*engine.TermNode, 0)
-	termChNodes := make([]chan storage.TermInfo, 0)
+	termChs := make([]chan storage.KvInfo, 0)
+
+	forNodes := make([]*engine.TermNode, 0)
+	forChs := make([]chan storage.KvInfo, 0)
 	for _, seg := range segmentDBs {
 		termNode := new(engine.TermNode)
 		termNode.DB = seg.inverted
 
 		// 开启协程遍历读取
-		termCh := make(chan storage.TermInfo)
+		termCh := make(chan storage.KvInfo)
 		go seg.inverted.GetTermCursor(termCh)
 
+		forCh := make(chan storage.KvInfo)
+		go seg.forward.GetCursor(forCh)
+
 		termNodes = append(termNodes, termNode)
-		termChNodes = append(termChNodes, termCh)
+		termChs = append(termChs, termCh)
+
+		forNodes = append(forNodes, new(engine.TermNode))
+		forChs = append(forChs, forCh)
 	}
 
-	// 合并
-	res, err := engine.MergeKTermSegments(termNodes, termChNodes)
+	// 合并term和倒排数据
+	res, err := engine.MergeKTermSegments(termNodes, termChs)
 	if err != nil {
 		log.Errorf("merge error: %v", err)
 		return err
@@ -169,19 +179,28 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 		}
 	}
 
-	// // update meta info
-	// err = m.Meta.UpdateSegMeta(targetEng.CurrSegID, docSize)
-	// if err != nil {
-	// 	log.Errorf("update seg meta err:%v", err)
-	// 	return err
-	// }
+	log.Debugf("start forwatd:%s", strings.Repeat("-", 20))
 
-	// // delete old segs
-	// err = m.deleteOldSeg(segMap)
-	// if err != nil {
-	// 	log.Errorf("delete old seg error: %v", err)
-	// 	return err
-	// }
+	// 合并正排数据
+	err = engine.MergeKForwardSegments(targetEng.ForwardDB, forNodes, forChs)
+	if err != nil {
+		log.Errorf("forward merge error: %v", err)
+		return err
+	}
+
+	// update meta info
+	err = m.Meta.UpdateSegMeta(targetEng.CurrSegID, docSize)
+	if err != nil {
+		log.Errorf("update seg meta err:%v", err)
+		return err
+	}
+
+	// delete old segs
+	err = m.deleteOldSeg(segMap)
+	if err != nil {
+		log.Errorf("delete old seg error: %v", err)
+		return err
+	}
 	return nil
 }
 

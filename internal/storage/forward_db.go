@@ -9,9 +9,9 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-const bucketName = "forward"
+const forwardBucket = "forward"
 
-const forwardCountKey = "forwardCount"
+const ForwardCountKey = "forwardCount"
 
 // ForwardDB 存储器
 type ForwardDB struct {
@@ -22,12 +22,17 @@ type ForwardDB struct {
 func (f *ForwardDB) Add(doc *Document) error {
 	key := strconv.Itoa(int(doc.DocID))
 	body, _ := json.Marshal(doc)
-	return Put(f.db, bucketName, []byte(key), body)
+	return Put(f.db, forwardBucket, []byte(key), body)
+}
+
+// Put add forward data
+func (f *ForwardDB) Put(key, value []byte) error {
+	return Put(f.db, forwardBucket, []byte(key), value)
 }
 
 // Count 获取文档总数
 func (f *ForwardDB) Count() (uint64, error) {
-	body, err := Get(f.db, bucketName, []byte(forwardCountKey))
+	body, err := Get(f.db, forwardBucket, []byte(ForwardCountKey))
 	if err != nil {
 		return 0, err
 	}
@@ -37,13 +42,26 @@ func (f *ForwardDB) Count() (uint64, error) {
 
 // UpdateCount 获取文档总数
 func (f *ForwardDB) UpdateCount(count uint64) error {
-	return Put(f.db, bucketName, []byte(forwardCountKey), []byte(strconv.Itoa(int(count))))
+	return Put(f.db, forwardBucket, []byte(ForwardCountKey), []byte(strconv.Itoa(int(count))))
 }
 
 // Get get forward data
 func (f *ForwardDB) Get(docID uint64) ([]byte, error) {
 	key := strconv.Itoa(int(docID))
-	return Get(f.db, bucketName, []byte(key))
+	return Get(f.db, forwardBucket, []byte(key))
+}
+
+// GetCursor 获取遍历游标
+func (f *ForwardDB) GetCursor(termCh chan KvInfo) {
+	f.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(forwardBucket))
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			termCh <- KvInfo{k, v}
+		}
+		close(termCh)
+		return nil
+	})
 }
 
 // Close --

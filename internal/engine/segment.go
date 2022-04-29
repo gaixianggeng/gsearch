@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"doraemon/internal/storage"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,17 +32,17 @@ type SegInfo struct {
 type LoserTree struct {
 	tree     []int // 索引表示顺序，0表示最小值，value表示对应的leaves的index
 	leaves   []*TermNode
-	leavesCh []chan storage.TermInfo
+	leavesCh []chan storage.KvInfo
 }
 
 // TermNode --
 type TermNode struct {
-	*storage.TermInfo
+	*storage.KvInfo
 	DB *storage.InvertedDB // 主要用来调用intervted的相关方法
 }
 
 // NewSegLoserTree 败者树
-func NewSegLoserTree(leaves []*TermNode, leavesCh []chan storage.TermInfo) *LoserTree {
+func NewSegLoserTree(leaves []*TermNode, leavesCh []chan storage.KvInfo) *LoserTree {
 	k := len(leaves)
 
 	lt := &LoserTree{
@@ -81,12 +82,12 @@ func (lt *LoserTree) initWinner(idx int) int {
 		leftCh := <-lt.leavesCh[left]
 		rightCh := <-lt.leavesCh[right]
 
-		lt.leaves[left].TermInfo = &storage.TermInfo{
+		lt.leaves[left].KvInfo = &storage.KvInfo{
 			Key:   leftCh.Key,
 			Value: leftCh.Value,
 		}
 
-		lt.leaves[right].TermInfo = &storage.TermInfo{
+		lt.leaves[right].KvInfo = &storage.KvInfo{
 			Key:   rightCh.Key,
 			Value: rightCh.Value,
 		}
@@ -136,7 +137,7 @@ func (lt *LoserTree) Pop() (res *TermNode) {
 			lt.leaves[leafWinIdx] = nil
 		} else {
 			// 重新赋值
-			lt.leaves[leafWinIdx].TermInfo = &storage.TermInfo{
+			lt.leaves[leafWinIdx].KvInfo = &storage.KvInfo{
 				Key:   termCh.Key,
 				Value: termCh.Value,
 			}
@@ -173,7 +174,7 @@ func (lt *LoserTree) Pop() (res *TermNode) {
 }
 
 // MergeKTermSegments 多路归并，合并term数据，合并后需要一起处理合并倒排表数据
-func MergeKTermSegments(list []*TermNode, chList []chan storage.TermInfo) (InvertedIndexHash, error) {
+func MergeKTermSegments(list []*TermNode, chList []chan storage.KvInfo) (InvertedIndexHash, error) {
 	// 初始化
 	lt := NewSegLoserTree(list, chList)
 
@@ -185,13 +186,12 @@ func MergeKTermSegments(list []*TermNode, chList []chan storage.TermInfo) (Inver
 			break
 		}
 		log.Debugf("pop node key:%+v,value:%v", string(node.Key), node.Value)
-		log.Debugf("%v", node.DB)
 		val, err := storage.Bytes2TermVal(node.Value)
 		if err != nil {
 			return nil, fmt.Errorf("bytes2termval err:%s", err)
 		}
 		// 解码
-		log.Debugf("val:%+v,%v", val, node.DB)
+		log.Debugf("val:%+v", val)
 		c, err := node.DB.GetDocInfo(val[1], val[2])
 		if err != nil {
 			return nil, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
@@ -215,40 +215,34 @@ func MergeKTermSegments(list []*TermNode, chList []chan storage.TermInfo) (Inver
 	return res, nil
 }
 
-// // MergeKForwardSegments 合并正排
-// func MergeKForwardSegments(targetDB *storage.ForwardDB, lists []*TermNode) (InvertedIndexHash, error) {
-// 	// 初始化
-// 	lt := NewSegLoserTree(lists)
+// MergeKForwardSegments 合并正排
+func MergeKForwardSegments(
+	forDB *storage.ForwardDB, list []*TermNode, chList []chan storage.KvInfo) error {
+	// 初始化
+	lt := NewSegLoserTree(list, chList)
+	count := uint64(0)
+	for {
+		node := lt.Pop()
+		if node == nil {
+			break
+		}
+		//TODO: 正排总数字段考虑下其他存储or实现方式
+		// 正排中的总数，需要单独操作
+		if string(node.Key) == storage.ForwardCountKey {
+			c, err := strconv.Atoi(string(node.Value))
+			if err != nil {
+				return fmt.Errorf("strconv.Atoi err:%s", err)
+			}
+			count += uint64(c)
+			continue
+		}
+		err := forDB.Put(node.Key, node.Value)
+		if err != nil {
+			return fmt.Errorf("Put err:%s", err)
+		}
+		log.Debugf("pop node key:%s,value:%s", node.Key, node.Value)
+	}
 
-// 	for {
-// 		node := lt.Pop()
-// 		if node == nil {
-// 			break
-// 		}
-// 		val, err := node.DB.Bytes2TermVal(node.Value)
-// 		if err != nil {
-// 			return nil, fmt.Errorf("bytes2termval err:%s", err)
-// 		}
-// 		// 解码
-// 		c, err := node.DB.GetDocInfo(val[1], val[2])
-// 		if err != nil {
-// 			return nil, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
-// 		}
-// 		pos, count, err := decodePostings(bytes.NewBuffer(c))
-
-// 		log.Debugf("pop node key:%+v,value:%v,count:%d", string(node.Key), val, count)
-// 		log.Debugf(strings.Repeat("-", 20))
-
-// 		if p, ok := res[string(node.Key)]; ok {
-// 			p.DocCount += count
-// 			p.PostingsList = MergePostings(p.PostingsList, pos)
-// 			continue
-// 		}
-// 		res[string(node.Key)] = &InvertedIndexValue{
-// 			Token:        string(node.Key),
-// 			DocCount:     count,
-// 			PostingsList: pos,
-// 		}
-// 	}
-// 	return res, nil
-// }
+	// 更新count
+	return forDB.UpdateCount(count)
+}

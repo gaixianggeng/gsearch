@@ -7,7 +7,7 @@ import (
 )
 
 func TestForwardDB_Count(t *testing.T) {
-	db, err := bolt.Open("../../data/forward.db", 0600, nil)
+	db, err := bolt.Open("../../data/2.forward", 0600, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -18,7 +18,7 @@ func TestForwardDB_Count(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
-		{"test1", 2, false},
+		{"test1", 8, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
