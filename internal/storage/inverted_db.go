@@ -72,19 +72,7 @@ func (t *InvertedDB) GetTermInfo(token string) (*TermValues, error) {
 	if err != nil {
 		return nil, fmt.Errorf("GetTermInfo err:%v", err)
 	}
-	return t.Bytes2TermVal(c)
-}
-
-// Bytes2TermVal 字节转换为TermValues
-func (t *InvertedDB) Bytes2TermVal(values []byte) (*TermValues, error) {
-	var p TermValues
-	err := binary.Read(bytes.NewBuffer(values), binary.LittleEndian, &p)
-	if err != nil {
-		return nil, fmt.Errorf("fetchPostings BinaryRead err: %v", err)
-	}
-
-	return &p, nil
-
+	return Bytes2TermVal(c)
 }
 
 // GetDocInfo 根据地址获取读取文件
@@ -155,4 +143,16 @@ func NewInvertedDB(termName, postingsName string) *InvertedDB {
 	}
 	log.Debugf("file size:%d", stat.Size())
 	return &InvertedDB{f, db, uint64(stat.Size())}
+}
+
+// Bytes2TermVal 字节转换为TermValues
+func Bytes2TermVal(values []byte) (*TermValues, error) {
+	var p TermValues
+	err := binary.Read(bytes.NewBuffer(values), binary.LittleEndian, &p)
+	if err != nil {
+		return nil, fmt.Errorf("fetchPostings BinaryRead err: %v", err)
+	}
+
+	return &p, nil
+
 }

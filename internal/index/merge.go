@@ -122,7 +122,7 @@ func (m *MergeScheduler) merge(segs *MergeMessage) error {
 func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 	// 获取merge的文件
 	segMap, docSize := m.getMergeFiles(segs)
-	log.Debugf("prepare to merge seg list:%v", segMap)
+	log.Debugf("prepare to merge seg list:%v,docsize:%d", segMap, docSize)
 
 	// 初始化对应正排和倒排库
 	segmentDBs := make([]segmentDB, 0)
@@ -138,19 +138,21 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 	log.Debugf("final prepare to merge[%v]!", segMap)
 
 	termNodes := make([]*engine.TermNode, 0)
+	termChNodes := make([]chan storage.TermInfo, 0)
 	for _, seg := range segmentDBs {
 		termNode := new(engine.TermNode)
-		termNode.Info = make(chan storage.TermInfo)
 		termNode.DB = seg.inverted
 
 		// 开启协程遍历读取
-		go seg.inverted.GetTermCursor(termNode.Info)
+		termCh := make(chan storage.TermInfo)
+		go seg.inverted.GetTermCursor(termCh)
 
 		termNodes = append(termNodes, termNode)
+		termChNodes = append(termChNodes, termCh)
 	}
 
 	// 合并
-	res, err := engine.MergeKTermSegments(termNodes)
+	res, err := engine.MergeKTermSegments(termNodes, termChNodes)
 	if err != nil {
 		log.Errorf("merge error: %v", err)
 		return err
@@ -167,20 +169,19 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 		}
 	}
 
-	// update meta info
-	err = m.Meta.UpdateSegMeta(targetEng.CurrSegID, docSize)
-	if err != nil {
-		log.Errorf("update seg meta err:%v", err)
-		return err
-	}
+	// // update meta info
+	// err = m.Meta.UpdateSegMeta(targetEng.CurrSegID, docSize)
+	// if err != nil {
+	// 	log.Errorf("update seg meta err:%v", err)
+	// 	return err
+	// }
 
-	// delete old segs
-	err = m.deleteOldSeg(segMap)
-	if err != nil {
-		log.Errorf("delete old seg error: %v", err)
-		return err
-	}
-	// 删除seginfo里的旧segemnts
+	// // delete old segs
+	// err = m.deleteOldSeg(segMap)
+	// if err != nil {
+	// 	log.Errorf("delete old seg error: %v", err)
+	// 	return err
+	// }
 	return nil
 }
 
