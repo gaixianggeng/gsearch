@@ -74,19 +74,20 @@ func (e *Engine) Token2PostingsLists(bufInvertHash InvertedIndexHash, token stri
 		pl.PositionCount++
 	} else {
 		// 不为空表示写入操作，否则为查询
-		docCount := uint64(0)
+		termValue := new(storage.TermValue)
 		if docID != 0 {
-			docCount = 1
+			termValue.DocCount = 1
+			// docCount = 1
 		} else {
 			// docCount 用于召回排序使用
 			var err error
-			docCount, err = e.getTokenCount(token)
+			termValue, err = e.getTokenCount(token)
 			if err != nil {
 				return fmt.Errorf("token2PostingsLists GetTokenID err: %v", err)
 			}
 
 		}
-		bufInvert = CreateNewInvertedIndex(token, docCount)
+		bufInvert = CreateNewInvertedIndex(token, termValue)
 		bufInvertHash[token] = bufInvert
 		pl = CreateNewPostingsList(docID)
 		bufInvert.PostingsList = pl
@@ -107,7 +108,7 @@ func (e *Engine) FetchPostings(token string) (*PostingsList, uint64, error) {
 		return nil, 0, fmt.Errorf("FetchPostings getForwardAddr err: %v", err)
 	}
 
-	c, err := e.InvertedDB.GetDocInfo(term[1], term[2])
+	c, err := e.InvertedDB.GetDocInfo(term.Offset, term.Size)
 	if err != nil {
 		return nil, 0, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
 	}
@@ -138,7 +139,7 @@ func (e *Engine) Close() {
 }
 
 // getTokenCount 通过token获取doc数量 insert 标识是写入还是查询 写入时不为空
-func (e *Engine) getTokenCount(token string) (uint64, error) {
+func (e *Engine) getTokenCount(token string) (*storage.TermValue, error) {
 	// _, c, err := e.FetchPostings(token)
 	// if err != nil {
 	// 	return 0, fmt.Errorf("getTokenCount FetchPostings err: %v", err)
@@ -146,9 +147,9 @@ func (e *Engine) getTokenCount(token string) (uint64, error) {
 	// return c, nil
 	termInfo, err := e.InvertedDB.GetTermInfo(token)
 	if err != nil || termInfo == nil {
-		return 0, fmt.Errorf("getTokenCount GetTermInfo err: %v", err)
+		return nil, fmt.Errorf("getTokenCount GetTermInfo err: %v", err)
 	}
-	return termInfo[0], nil
+	return termInfo, nil
 }
 
 // NewEngine --

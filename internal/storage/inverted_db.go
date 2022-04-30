@@ -28,8 +28,12 @@ type KvInfo struct {
 	Value []byte
 }
 
-// TermValues 存储的doc_count、offset、size
-type TermValues [3]uint64
+// TermValue 存储的doc_count、offset、size
+type TermValue struct {
+	DocCount uint64
+	Offset   uint64
+	Size     uint64
+}
 
 // StoragePostings 倒排列表存储到数据库中
 func (t *InvertedDB) StoragePostings(token string, values []byte, docCount uint64) error {
@@ -67,7 +71,7 @@ func (t *InvertedDB) Get(key []byte) (value []byte, err error) {
 }
 
 // GetTermInfo 获取term关联的倒排地址
-func (t *InvertedDB) GetTermInfo(token string) (*TermValues, error) {
+func (t *InvertedDB) GetTermInfo(token string) (*TermValue, error) {
 	c, err := t.Get([]byte(token))
 	if err != nil {
 		return nil, fmt.Errorf("GetTermInfo err:%v", err)
@@ -145,13 +149,12 @@ func NewInvertedDB(termName, postingsName string) *InvertedDB {
 }
 
 // Bytes2TermVal 字节转换为TermValues
-func Bytes2TermVal(values []byte) (*TermValues, error) {
-	var p TermValues
+func Bytes2TermVal(values []byte) (*TermValue, error) {
+	var p TermValue
 	err := binary.Read(bytes.NewBuffer(values), binary.LittleEndian, &p)
 	if err != nil {
 		return nil, fmt.Errorf("fetchPostings BinaryRead err: %v", err)
 	}
-
 	return &p, nil
 
 }

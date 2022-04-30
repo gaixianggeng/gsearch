@@ -192,7 +192,7 @@ func MergeKTermSegments(list []*TermNode, chList []chan storage.KvInfo) (Inverte
 		}
 		// 解码
 		log.Debugf("val:%+v", val)
-		c, err := node.DB.GetDocInfo(val[1], val[2])
+		c, err := node.DB.GetDocInfo(val.Offset, val.Size)
 		if err != nil {
 			return nil, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
 		}
