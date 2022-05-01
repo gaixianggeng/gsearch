@@ -23,7 +23,10 @@ func Run(meta *engine.Meta, conf *conf.Config) {
 	}
 	defer index.Close()
 
+	go index.scheduler.Merge()
+
 	addDoc(index)
+	log.Infof("index run end")
 }
 
 func addDoc(in *Index) {

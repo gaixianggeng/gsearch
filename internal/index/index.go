@@ -63,6 +63,9 @@ func (in *Index) Flush(flag ...int) error {
 	// 更新segment meta数据
 	in.Meta.UpdateSegMeta(in.CurrSegID, in.IndexCount)
 
+	// close db
+	in.Engine.Close()
+
 	// 已存在超过2个segment，则需要判断seg是否需要merge
 	if len(in.Meta.SegInfo) > 1 {
 		in.scheduler.mayMerge()

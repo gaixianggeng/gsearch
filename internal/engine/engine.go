@@ -170,6 +170,7 @@ func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
 // 读取对应的segment文件下的db
 func dbInit(meta *Meta, conf *conf.Config, mode Mode) (SegID, *storage.InvertedDB, *storage.ForwardDB) {
 	var segID SegID
+
 	if mode == SearchMode {
 		for _, seg := range meta.SegInfo {
 			// 检查是否可读
@@ -182,10 +183,13 @@ func dbInit(meta *Meta, conf *conf.Config, mode Mode) (SegID, *storage.InvertedD
 	} else if mode == IndexMode {
 		segID = meta.NextSeg
 		meta.NewSegment()
+
 	} else if mode == MergeMode {
 		segID = meta.NextSeg
 		meta.NewSegment()
 	}
+
+	log.Infof("dbInit segID:%v,next:%v", segID, meta.NextSeg)
 	termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, TermDBSuffix)
 	invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, InvertedDBSuffix)
 	forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, ForwardDBSuffix)

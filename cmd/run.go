@@ -4,9 +4,15 @@ import (
 	"doraemon/conf"
 	"doraemon/internal/engine"
 	"doraemon/internal/index"
+	"flag"
 	"fmt"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	action int64
 )
 
 func run() {
@@ -24,18 +30,43 @@ func run() {
 		panic("meta is nil")
 	}
 
+	// 定时同步meta数据
 	ticker := time.NewTicker(time.Second * 1)
 	go meta.SyncByTicker(ticker)
-	defer ticker.Stop()
 
 	if c.Version != meta.Version {
 		panic(fmt.Sprintf("version not match, %s != %s", c.Version, meta.Version))
 	}
 
-	index.Run(meta, c)
+	start(c, meta)
 
-	// 最后同步元数据至文件
-	meta.SyncMeta()
+	// close
+	func() {
+		// 最后同步元数据至文件
+		log.Info("close")
+		meta.SyncMeta()
+		log.Info("close")
+		ticker.Stop()
+		log.Info("close")
+	}()
+}
 
-	time.Sleep(time.Second * 3)
+func start(c *conf.Config, meta *engine.Meta) {
+	if action == 1 {
+		log.Debugf("start server...")
+	} else if action == 2 {
+		log.Debugf("start")
+		index.Run(meta, c)
+		log.Debug("end")
+	}
+}
+
+// 获取flag参数
+func flagInit() {
+	flag.Int64Var(&action, "action", 1, "start action 1:serv 2:index")
+	flag.Parse()
+}
+
+func init() {
+	flagInit()
 }

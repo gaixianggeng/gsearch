@@ -45,15 +45,14 @@ func (m *MergeScheduler) Merge() {
 	for {
 		select {
 		case segs := <-m.Message:
-			log.Debugf("merge msg: %v", segs)
+			log.Infof("Merge msg: %v", segs)
 			// 合并
 			err := m.merge(segs)
 			if err != nil {
 				log.Errorf("merge error: %v", err)
 			}
-		default:
+		case <-time.After(1e9):
 			log.Infof("sleep 1s...")
-			time.Sleep(1e9)
 		}
 
 	}
@@ -76,6 +75,8 @@ func (m *MergeScheduler) mayMerge() {
 
 	m.Add(1)
 	m.Message <- mess
+
+	log.Infof("merge segs: %v", mess)
 }
 
 // 计算是否有段需要合并
@@ -112,6 +113,7 @@ func (m *MergeScheduler) merge(segs *MergeMessage) error {
 	// 合并
 	err := m.mergeSegments(segs)
 	if err != nil {
+		log.Errorf("merge error: %v", err)
 		return err
 	}
 	return nil
