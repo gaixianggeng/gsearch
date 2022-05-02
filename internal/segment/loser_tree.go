@@ -1,4 +1,4 @@
-package engine
+package segment
 
 import (
 	"bytes"
@@ -10,21 +10,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-// SegInfo 段信息
-type SegInfo struct {
-	SegID            SegID  `json:"seg_name"`           // 段前缀名
-	SegSize          uint64 `json:"seg_size"`           // 写入doc数量
-	InvertedFileSize uint64 `json:"inverted_file_size"` // 写入inverted文件大小
-	ForwardFileSize  uint64 `json:"forward_file_size"`  // 写入forward文件大小
-	DelSize          uint64 `json:"del_size"`           // 删除文档数量
-	DelFileSize      uint64 `json:"del_file_size"`      // 删除文档文件大小
-	TermSize         uint64 `json:"term_size"`          // term文档文件大小
-	TermFileSize     uint64 `json:"term_file_size"`     // term文件大小
-	ReferenceCount   uint64 `json:"reference_count"`    // 引用计数
-	IsReading        bool   `json:"is_reading"`         // 是否正在被读取
-	IsMerging        bool   `json:"is_merging"`         // 是否正在参与合并
-}
 
 // https://www.cnblogs.com/qianye/archive/2012/11/25/2787923.html
 

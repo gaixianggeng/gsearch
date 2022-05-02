@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"doraemon/conf"
 	"doraemon/internal/query"
+	"doraemon/internal/segment"
 	"doraemon/internal/storage"
 	"fmt"
 
@@ -13,7 +14,7 @@ import (
 // Engine 写入引擎
 type Engine struct {
 	Meta      *Meta
-	CurrSegID SegID //当前engine关联的segID
+	CurrSegID segment.SegID //当前engine关联的segID
 	// MaxSegmentCount int64 // 最大segment数,超出就要merge
 
 	ForwardDB  *storage.ForwardDB
@@ -168,8 +169,8 @@ func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
 }
 
 // 读取对应的segment文件下的db
-func dbInit(meta *Meta, conf *conf.Config, mode Mode) (SegID, *storage.InvertedDB, *storage.ForwardDB) {
-	var segID SegID
+func dbInit(meta *Meta, conf *conf.Config, mode Mode) (segment.SegID, *storage.InvertedDB, *storage.ForwardDB) {
+	var segID segment.SegID = -1
 
 	if mode == SearchMode {
 		for _, seg := range meta.SegInfo {
@@ -183,10 +184,12 @@ func dbInit(meta *Meta, conf *conf.Config, mode Mode) (SegID, *storage.InvertedD
 	} else if mode == IndexMode {
 		segID = meta.NextSeg
 		meta.NewSegment()
-
 	} else if mode == MergeMode {
 		segID = meta.NextSeg
 		meta.NewSegment()
+	}
+	if segID < 0 {
+		log.Fatalf("dbInit segID:%d < 0", segID)
 	}
 
 	log.Infof("dbInit segID:%v,next:%v", segID, meta.NextSeg)

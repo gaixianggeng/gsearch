@@ -2,6 +2,7 @@ package engine
 
 import (
 	"doraemon/conf"
+	"doraemon/internal/segment"
 	"doraemon/pkg/utils"
 	"encoding/json"
 	"fmt"
@@ -16,16 +17,13 @@ var (
 	metaFile = "segments.json" // 存储的元数据文件，包含各种属性信息
 )
 
-// SegID --
-type SegID uint64
-
 // Meta 元数据
 type Meta struct {
-	Version  string             `json:"version"` // 版本号
-	path     string             // 存储路径
-	NextSeg  SegID              `json:"next_seg"`  // 下一个segmentid,永远表示下一个新建的segment,seginfos中不存在
-	SegCount uint64             `json:"seg_count"` // 当前segment的数量
-	SegInfo  map[SegID]*SegInfo `json:"seg_info"`  // 当前segments的信息
+	Version  string                             `json:"version"` // 版本号
+	path     string                             // 存储路径
+	NextSeg  segment.SegID                      `json:"next_seg"`  // 下一个segmentid,永远表示下一个新建的segment,seginfos中不存在
+	SegCount uint64                             `json:"seg_count"` // 当前segment的数量
+	SegInfo  map[segment.SegID]*segment.SegInfo `json:"seg_info"`  // 当前segments的信息
 
 	sync.Mutex
 }
@@ -45,7 +43,7 @@ func ParseMeta(c *conf.Config) (*Meta, error) {
 			Version:  c.Version,
 			SegCount: 0,
 			path:     metaFile,
-			SegInfo:  make(map[SegID]*SegInfo, 0),
+			SegInfo:  make(map[segment.SegID]*segment.SegInfo, 0),
 		}
 		err = writeMeta(m)
 		if err != nil {
@@ -81,7 +79,7 @@ func (m *Meta) SyncMeta() error {
 }
 
 // UpdateSegMeta 更新段信息
-func (m *Meta) UpdateSegMeta(segID SegID, indexCount uint64) error {
+func (m *Meta) UpdateSegMeta(segID segment.SegID, indexCount uint64) error {
 	m.Lock()
 	defer m.Unlock()
 
@@ -97,26 +95,14 @@ func (m *Meta) UpdateSegMeta(segID SegID, indexCount uint64) error {
 }
 
 // NewSegment 创建新的segment 只创建，更新nextseg，不更新currseg
-func (m *Meta) NewSegment() (*SegInfo, error) {
+func (m *Meta) NewSegment() error {
 	m.Lock()
 	defer m.Unlock()
-	log.Debugf("new segment:%d", m.NextSeg)
-	seg := &SegInfo{
-		SegID:   m.NextSeg,
-		SegSize: 0,
-	}
-	err := m.addNewSeg(seg)
-	if err != nil {
-		return nil, fmt.Errorf("addNewSeg err: %v", err)
-	}
-	return seg, nil
-}
-
-func (m *Meta) addNewSeg(seg *SegInfo) error {
-	if _, ok := m.SegInfo[SegID(seg.SegID)]; ok {
+	seg := segment.NewSegment(m.NextSeg)
+	if _, ok := m.SegInfo[segment.SegID(seg.SegID)]; ok {
 		return fmt.Errorf("seg:%d is exist", seg.SegID)
 	}
-	m.SegInfo[SegID(seg.SegID)] = seg
+	m.SegInfo[segment.SegID(seg.SegID)] = seg
 	m.SegCount++
 	m.NextSeg++
 	return nil

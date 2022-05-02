@@ -1,6 +1,7 @@
 package main
 
 import (
+	"doraemon/api"
 	"doraemon/conf"
 	"doraemon/internal/engine"
 	"doraemon/internal/index"
@@ -54,6 +55,7 @@ func run() {
 func start(c *conf.Config, meta *engine.Meta) {
 	if action == 1 {
 		log.Debugf("start server...")
+		api.StartServ(meta, c)
 	} else if action == 2 {
 		log.Debugf("start")
 		index.Run(meta, c)

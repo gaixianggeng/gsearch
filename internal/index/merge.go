@@ -3,6 +3,7 @@ package index
 import (
 	"doraemon/conf"
 	"doraemon/internal/engine"
+	"doraemon/internal/segment"
 	"doraemon/internal/storage"
 	"doraemon/pkg/utils"
 	"encoding/json"
@@ -38,7 +39,7 @@ type segmentName struct {
 }
 
 // MergeMessage 合并队列
-type MergeMessage []*engine.SegInfo
+type MergeMessage []*segment.SegInfo
 
 // Merge 合并入口
 func (m *MergeScheduler) Merge() {
@@ -86,7 +87,7 @@ func (m *MergeScheduler) calculateSegs() (*MergeMessage, bool) {
 
 	// 判断是否需要合并
 
-	segList := make([]*engine.SegInfo, 0)
+	segList := make([]*segment.SegInfo, 0)
 	segList = append(segList, segs[0])
 	segList = append(segList, segs[1])
 
@@ -102,7 +103,7 @@ func (m *MergeScheduler) merge(segs *MergeMessage) error {
 
 	// 恢复seg is_merging状态
 	defer func() {
-		for _, seg := range ([]*engine.SegInfo)(*segs) {
+		for _, seg := range ([]*segment.SegInfo)(*segs) {
 			// 如果merge失败，没有删除旧seg，需要恢复
 			if s, ok := m.Meta.SegInfo[seg.SegID]; ok {
 				s.IsMerging = false
@@ -140,13 +141,13 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 	}
 	log.Debugf("final prepare to merge[%v]!", segMap)
 
-	termNodes := make([]*engine.TermNode, 0)
+	termNodes := make([]*segment.TermNode, 0)
 	termChs := make([]chan storage.KvInfo, 0)
 
-	forNodes := make([]*engine.TermNode, 0)
+	forNodes := make([]*segment.TermNode, 0)
 	forChs := make([]chan storage.KvInfo, 0)
 	for _, seg := range segmentDBs {
-		termNode := new(engine.TermNode)
+		termNode := new(segment.TermNode)
 		termNode.DB = seg.inverted
 
 		// 开启协程遍历读取
@@ -159,12 +160,12 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 		termNodes = append(termNodes, termNode)
 		termChs = append(termChs, termCh)
 
-		forNodes = append(forNodes, new(engine.TermNode))
+		forNodes = append(forNodes, new(segment.TermNode))
 		forChs = append(forChs, forCh)
 	}
 
 	// 合并term和倒排数据
-	res, err := engine.MergeKTermSegments(termNodes, termChs)
+	res, err := segment.MergeKTermSegments(termNodes, termChs)
 	if err != nil {
 		log.Errorf("merge error: %v", err)
 		return err
@@ -184,7 +185,7 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 	log.Debugf("start forwatd:%s", strings.Repeat("-", 20))
 
 	// 合并正排数据
-	err = engine.MergeKForwardSegments(targetEng.ForwardDB, forNodes, forChs)
+	err = segment.MergeKForwardSegments(targetEng.ForwardDB, forNodes, forChs)
 	if err != nil {
 		log.Errorf("forward merge error: %v", err)
 		return err
@@ -206,7 +207,7 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 	return nil
 }
 
-func (m *MergeScheduler) deleteOldSeg(segMap map[engine.SegID]*segmentName) error {
+func (m *MergeScheduler) deleteOldSeg(segMap map[segment.SegID]*segmentName) error {
 
 	for segID, segName := range segMap {
 		if s, ok := m.Meta.SegInfo[segID]; ok {
@@ -244,11 +245,11 @@ func (m *MergeScheduler) deleteSegFile(segName *segmentName) error {
 
 }
 
-func (m *MergeScheduler) getMergeFiles(segs *MergeMessage) (map[engine.SegID]*segmentName, uint64) {
+func (m *MergeScheduler) getMergeFiles(segs *MergeMessage) (map[segment.SegID]*segmentName, uint64) {
 
-	segMap := make(map[engine.SegID]*segmentName, 0)
+	segMap := make(map[segment.SegID]*segmentName, 0)
 	docSize := uint64(0)
-	for _, seg := range []*engine.SegInfo(*segs) {
+	for _, seg := range []*segment.SegInfo(*segs) {
 		if seg.IsMerging {
 			log.Infof("seg:%v is merging...", seg)
 			continue
