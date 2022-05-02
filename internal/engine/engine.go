@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"bytes"
 	"doraemon/conf"
 	"doraemon/internal/query"
 	"doraemon/internal/segment"
@@ -13,194 +12,134 @@ import (
 
 // Engine 写入引擎
 type Engine struct {
-	Meta      *Meta
-	CurrSegID segment.SegID //当前engine关联的segID
-	// MaxSegmentCount int64 // 最大segment数,超出就要merge
+	CurrSegID segment.SegID //当前engine关联的segID 查询时为-1
+	Seg       map[segment.SegID]*segment.Segment
+	meta      *Meta // 元数据
+	conf      *conf.Config
+	scheduler *MergeScheduler
 
-	ForwardDB  *storage.ForwardDB
-	InvertedDB *storage.InvertedDB
-
-	PostingsHashBuf InvertedIndexHash // 倒排索引缓冲区
-	BufCount        uint64            //倒排索引缓冲区的文档数
-	BufSize         uint64
-
-	// query
 	N int32 // ngram
+
+}
+
+// AddDoc 添加正排
+func (e *Engine) AddDoc(doc *storage.Document) error {
+	return e.Seg[e.CurrSegID].AddForward(doc)
 }
 
 // Text2PostingsLists --
 func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
+
+	go e.scheduler.Merge()
 	tokens, err := query.Ngram(text, e.N)
 	if err != nil {
 		return fmt.Errorf("text2PostingsLists Ngram err: %v", err)
 	}
-	bufInvertedHash := make(InvertedIndexHash)
-
-	for _, token := range tokens {
-		err := e.Token2PostingsLists(bufInvertedHash, token.Token, token.Position, docID)
-		if err != nil {
-			return fmt.Errorf("text2PostingsLists token2PostingsLists err: %v", err)
-		}
+	err = e.Seg[e.CurrSegID].Text2PostingsLists(e.meta.SegMeta, tokens, docID)
+	if err != nil {
+		return fmt.Errorf("text2PostingsLists err: %v", err)
 	}
-	log.Debugf("bufInvertedHash:%v", bufInvertedHash)
-
-	if e.PostingsHashBuf != nil && len(e.PostingsHashBuf) > 0 {
-		// 合并命中相同的token的不同doc
-		MergeInvertedIndex(e.PostingsHashBuf, bufInvertedHash)
-	} else {
-		e.PostingsHashBuf = make(InvertedIndexHash)
-		e.PostingsHashBuf = bufInvertedHash
+	// 达到阈值
+	if e.Seg[e.CurrSegID].IsNeedFlush() {
+		log.Infof("text2PostingsLists need flush")
+		e.Flush()
 	}
+	e.indexCount()
 	return nil
 }
 
-// Token2PostingsLists --
-func (e *Engine) Token2PostingsLists(bufInvertHash InvertedIndexHash, token string,
-	position uint64, docID uint64) error {
+// Flush --
+func (e *Engine) Flush(isEnd ...bool) error {
 
-	// init
-	bufInvert := new(InvertedIndexValue)
+	e.Seg[e.CurrSegID].Flush()
 
-	if len(bufInvertHash) > 0 {
-		if item, ok := bufInvertHash[token]; ok {
-			bufInvert = item
-		}
+	// update meta info
+	err := e.meta.UpdateSegMeta(e.CurrSegID, e.Seg[e.CurrSegID].BufCount)
+	if err != nil {
+		log.Errorf("update seg meta err:%v", err)
+		return err
 	}
 
-	pl := new(PostingsList)
-	if bufInvert != nil && bufInvert.PostingsList != nil {
-		pl = bufInvert.PostingsList
-		// 这里的positioinCount和下面bufInvert的positionCount是不一样的
-		// 这里统计的是同一个docid的position的个数
-		pl.PositionCount++
-	} else {
-		// 不为空表示写入操作，否则为查询
-		termValue := new(storage.TermValue)
-		if docID != 0 {
-			termValue.DocCount = 1
-			// docCount = 1
+	e.Seg[e.CurrSegID].Close()
+	delete(e.Seg, e.CurrSegID)
+
+	if len(e.meta.SegMeta.SegInfo) > 1 {
+		e.scheduler.mayMerge()
+	}
+
+	// new
+	if len(isEnd) > 0 && isEnd[0] {
+		return nil
+	}
+	segID, seg := segment.NewSegments(e.meta.SegMeta, e.conf, segment.IndexMode)
+	e.CurrSegID = segID
+	e.Seg = seg
+	return nil
+
+}
+
+// UpdateCount --
+func (e *Engine) UpdateCount(num uint64) error {
+	seg := e.Seg[e.CurrSegID]
+	count, err := seg.ForwardCount()
+	if err != nil {
+		if err.Error() == ErrCountKeyNotFound {
+			count = 0
 		} else {
-			// docCount 用于召回排序使用
-			var err error
-			termValue, err = e.getTokenCount(token)
-			if err != nil {
-				return fmt.Errorf("token2PostingsLists GetTokenID err: %v", err)
-			}
-
+			return fmt.Errorf("updateCount err: %v", err)
 		}
-		bufInvert = CreateNewInvertedIndex(token, termValue)
-		bufInvertHash[token] = bufInvert
-		pl = CreateNewPostingsList(docID)
-		bufInvert.PostingsList = pl
 	}
-	// 存储位置信息
-	pl.Positions = append(pl.Positions, position)
-	// 统计该token关联的所有doc的position的个数
-	bufInvert.PositionCount++
-
-	return nil
+	count += num
+	return seg.UpdateForwardCount(count)
 }
 
-// FetchPostings 通过token读取倒排表数据，返回倒排表、长度和err
-func (e *Engine) FetchPostings(token string) (*PostingsList, uint64, error) {
-
-	term, err := e.InvertedDB.GetTermInfo(token)
-	if err != nil {
-		return nil, 0, fmt.Errorf("FetchPostings getForwardAddr err: %v", err)
-	}
-
-	c, err := e.InvertedDB.GetDocInfo(term.Offset, term.Size)
-	if err != nil {
-		return nil, 0, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
-	}
-	return decodePostings(bytes.NewBuffer(c))
-
+func (e *Engine) indexCount() {
+	e.meta.Lock()
+	e.meta.IndexCount++
+	e.meta.Unlock()
 }
+
+// func (e *Engine) Flush() error {
+// 	return e.Seg[e.CurrSegID].Flush()
+// }
 
 // StoragePostings 落盘
-func (e *Engine) StoragePostings(p *InvertedIndexValue) error {
+func (e *Engine) StoragePostings(p *segment.InvertedIndexValue) error {
 	if p == nil {
 		return fmt.Errorf("updatePostings p is nil")
 	}
 
 	// 编码
-	buf, err := EncodePostings(p.PostingsList, p.DocCount)
+	buf, err := segment.EncodePostings(p.PostingsList, p.DocCount)
 	if err != nil {
 		return fmt.Errorf("updatePostings encodePostings err: %v", err)
 	}
 
 	// 开始写入数据库
-	return e.InvertedDB.StoragePostings(p.Token, buf.Bytes(), p.DocCount)
+	return e.Seg[e.CurrSegID].InvertedDB.StoragePostings(p.Token, buf.Bytes(), p.DocCount)
 }
 
 // Close --
 func (e *Engine) Close() {
-	e.InvertedDB.Close()
-	e.ForwardDB.Close()
-}
-
-// getTokenCount 通过token获取doc数量 insert 标识是写入还是查询 写入时不为空
-func (e *Engine) getTokenCount(token string) (*storage.TermValue, error) {
-	// _, c, err := e.FetchPostings(token)
-	// if err != nil {
-	// 	return 0, fmt.Errorf("getTokenCount FetchPostings err: %v", err)
-	// }
-	// return c, nil
-	termInfo, err := e.InvertedDB.GetTermInfo(token)
-	if err != nil || termInfo == nil {
-		return nil, fmt.Errorf("getTokenCount GetTermInfo err: %v", err)
+	for _, seg := range e.Seg {
+		seg.Close()
 	}
-	return termInfo, nil
+
+	e.scheduler.Close()
 }
 
 // NewEngine --
 // 每次初始化的时候调整meta数据
-func NewEngine(meta *Meta, conf *conf.Config, engineMode Mode) *Engine {
-	segID, inDB, forDB := dbInit(meta, conf, engineMode)
+func NewEngine(meta *Meta, conf *conf.Config, engineMode segment.Mode) *Engine {
+
+	sche := NewScheduleer(meta, conf)
+	segID, seg := segment.NewSegments(meta.SegMeta, conf, engineMode)
 	return &Engine{
-		Meta:       meta,
-		CurrSegID:  segID,
-		InvertedDB: inDB,
-		ForwardDB:  forDB,
-		BufSize:    5,
-		N:          2,
+		CurrSegID: segID,
+		Seg:       seg,
+		N:         2,
+		meta:      meta,
+		conf:      conf,
+		scheduler: sche,
 	}
-
-}
-
-// 读取对应的segment文件下的db
-func dbInit(meta *Meta, conf *conf.Config, mode Mode) (segment.SegID, *storage.InvertedDB, *storage.ForwardDB) {
-	var segID segment.SegID = -1
-
-	if mode == SearchMode {
-		for _, seg := range meta.SegInfo {
-			// 检查是否可读
-			if !seg.IsReading {
-				segID = seg.SegID
-				seg.IsReading = true
-				break
-			}
-		}
-	} else if mode == IndexMode {
-		segID = meta.NextSeg
-		meta.NewSegment()
-	} else if mode == MergeMode {
-		segID = meta.NextSeg
-		meta.NewSegment()
-	}
-	if segID < 0 {
-		log.Fatalf("dbInit segID:%d < 0", segID)
-	}
-
-	log.Infof("dbInit segID:%v,next:%v", segID, meta.NextSeg)
-	termName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, TermDBSuffix)
-	invertedName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, InvertedDBSuffix)
-	forwardName = fmt.Sprintf("%s%d%s", conf.Storage.Path, segID, ForwardDBSuffix)
-	log.Debugf(
-		"index:[termName:%s,invertedName:%s,forwardName:%s]",
-		termName,
-		invertedName,
-		forwardName,
-	)
-	return segID, storage.NewInvertedDB(termName, invertedName), storage.NewForwardDB(forwardName)
 }

@@ -23,7 +23,7 @@ type LoserTree struct {
 // TermNode --
 type TermNode struct {
 	*storage.KvInfo
-	DB *storage.InvertedDB // 主要用来调用intervted的相关方法
+	DB *Segment // 主要用来调用intervted的相关方法
 }
 
 // NewSegLoserTree 败者树
@@ -177,7 +177,7 @@ func MergeKTermSegments(list []*TermNode, chList []chan storage.KvInfo) (Inverte
 		}
 		// 解码
 		log.Debugf("val:%+v", val)
-		c, err := node.DB.GetDocInfo(val.Offset, val.Size)
+		c, err := node.DB.GetInvertedDoc(val.Offset, val.Size)
 		if err != nil {
 			return nil, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
 		}
@@ -202,7 +202,7 @@ func MergeKTermSegments(list []*TermNode, chList []chan storage.KvInfo) (Inverte
 
 // MergeKForwardSegments 合并正排
 func MergeKForwardSegments(
-	forDB *storage.ForwardDB, list []*TermNode, chList []chan storage.KvInfo) error {
+	seg *Segment, list []*TermNode, chList []chan storage.KvInfo) error {
 	// 初始化
 	lt := NewSegLoserTree(list, chList)
 	count := uint64(0)
@@ -221,7 +221,7 @@ func MergeKForwardSegments(
 			count += uint64(c)
 			continue
 		}
-		err := forDB.Put(node.Key, node.Value)
+		err := seg.PutForward(node.Key, node.Value)
 		if err != nil {
 			return fmt.Errorf("Put err:%s", err)
 		}
@@ -229,5 +229,5 @@ func MergeKForwardSegments(
 	}
 
 	// 更新count
-	return forDB.UpdateCount(count)
+	return seg.UpdateForwardCount(count)
 }

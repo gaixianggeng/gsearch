@@ -19,13 +19,11 @@ var (
 
 // Meta 元数据
 type Meta struct {
-	Version  string                             `json:"version"` // 版本号
-	path     string                             // 存储路径
-	NextSeg  segment.SegID                      `json:"next_seg"`  // 下一个segmentid,永远表示下一个新建的segment,seginfos中不存在
-	SegCount uint64                             `json:"seg_count"` // 当前segment的数量
-	SegInfo  map[segment.SegID]*segment.SegInfo `json:"seg_info"`  // 当前segments的信息
-
-	sync.Mutex
+	sync.RWMutex
+	Version    string           `json:"version"` // 版本号
+	IndexCount uint64           `json:"index"`
+	SegMeta    *segment.SegMeta `json:"seg_meta"`
+	path       string           `json:"-"` // 元数据文件路径
 }
 
 // ParseMeta 解析数据
@@ -39,11 +37,15 @@ func ParseMeta(c *conf.Config) (*Meta, error) {
 			return nil, fmt.Errorf("create segmentsGenFile err: %v", err)
 		}
 		m := &Meta{
-			NextSeg:  0,
-			Version:  c.Version,
-			SegCount: 0,
-			path:     metaFile,
-			SegInfo:  make(map[segment.SegID]*segment.SegInfo, 0),
+			Version: c.Version,
+			path:    metaFile,
+			SegMeta: &segment.SegMeta{
+				NextSeg:  0,
+				SegCount: 0,
+				SegInfo:  make(map[segment.SegID]*segment.SegInfo, 0),
+			},
+			//TODO: 初始化读取正排数据
+			IndexCount: 0,
 		}
 		err = writeMeta(m)
 		if err != nil {
@@ -60,7 +62,8 @@ func (m *Meta) SyncByTicker(ticker *time.Ticker) {
 	// 清理计时器
 	// defer ticker.Stop()
 	for {
-		log.Infof("ticker start:%s,next seg id :%d", time.Now().Format("2006-01-02 15:04:05"), m.NextSeg)
+		log.Infof("ticker start:%s,next seg id :%d",
+			time.Now().Format("2006-01-02 15:04:05"), m.SegMeta.NextSeg)
 		err := m.SyncMeta()
 		if err != nil {
 			log.Errorf("sync meta err:%v", err)
@@ -77,37 +80,6 @@ func (m *Meta) SyncMeta() error {
 	}
 	return nil
 }
-
-// UpdateSegMeta 更新段信息
-func (m *Meta) UpdateSegMeta(segID segment.SegID, indexCount uint64) error {
-	m.Lock()
-	defer m.Unlock()
-
-	if _, ok := m.SegInfo[segID]; !ok {
-		return fmt.Errorf("seg:%d is not exist", segID)
-	}
-	m.SegInfo[segID].SegSize = indexCount
-	err := m.SyncMeta()
-	if err != nil {
-		return fmt.Errorf("sync writeSeg err: %v", err)
-	}
-	return nil
-}
-
-// NewSegment 创建新的segment 只创建，更新nextseg，不更新currseg
-func (m *Meta) NewSegment() error {
-	m.Lock()
-	defer m.Unlock()
-	seg := segment.NewSegment(m.NextSeg)
-	if _, ok := m.SegInfo[segment.SegID(seg.SegID)]; ok {
-		return fmt.Errorf("seg:%d is exist", seg.SegID)
-	}
-	m.SegInfo[segment.SegID(seg.SegID)] = seg
-	m.SegCount++
-	m.NextSeg++
-	return nil
-}
-
 func readMeta(metaFile string) (*Meta, error) {
 	metaByte, err := os.ReadFile(metaFile)
 	if err != nil {
@@ -133,6 +105,19 @@ func writeMeta(m *Meta) error {
 	_, err = f.Write(b)
 	if err != nil {
 		return fmt.Errorf("write file err: %v", err)
+	}
+	return nil
+}
+
+// UpdateSegMeta --
+func (m *Meta) UpdateSegMeta(segID segment.SegID, indexCount uint64) error {
+	err := m.SegMeta.UpdateSegMeta(segID, indexCount)
+	if err != nil {
+		return fmt.Errorf("update seg meta err: %v", err)
+	}
+	err = m.SyncMeta()
+	if err != nil {
+		return fmt.Errorf("sync writeSeg err: %v", err)
 	}
 	return nil
 }

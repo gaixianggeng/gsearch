@@ -2,6 +2,7 @@ package recall
 
 import (
 	"doraemon/internal/engine"
+	"doraemon/internal/segment"
 	"fmt"
 	"sort"
 
@@ -19,7 +20,7 @@ type Recall struct {
 // 用于实现排序map
 type queryTokenHash struct {
 	token         string
-	invertedIndex *engine.InvertedIndexValue
+	invertedIndex *segment.InvertedIndexValue
 }
 
 // SearchItem 查询结果
@@ -33,8 +34,8 @@ type Recalls []*SearchItem
 
 // token游标 标识当前位置
 type searchCursor struct {
-	doc     *engine.PostingsList // 文档编号的序列
-	current *engine.PostingsList // 当前的文档编号
+	doc     *segment.PostingsList // 文档编号的序列
+	current *segment.PostingsList // 当前的文档编号
 }
 
 // 短语游标
@@ -52,7 +53,7 @@ func (r *Recall) Search(query string) (Recalls, error) {
 		log.Errorf("splitQuery2Tokens err: %v", err)
 		return nil, fmt.Errorf("splitQuery2Tokens err: %v", err)
 	}
-	r.sortToken(r.Engine.PostingsHashBuf)
+	r.sortToken(r.Engine.Seg[r.Engine.CurrSegID].PostingsHashBuf)
 	if len(r.queryToken) == 0 {
 		return nil, fmt.Errorf("queryTokenHash is nil")
 	}
@@ -87,7 +88,7 @@ func (r *Recall) searchDoc() (Recalls, error) {
 		if t.token == "" {
 			return nil, fmt.Errorf("token is nil")
 		}
-		postings, _, err := r.FetchPostings(t.token)
+		postings, _, err := r.Engine.Seg[r.Engine.CurrSegID].FetchPostings(t.token)
 		if err != nil {
 			return nil, fmt.Errorf("fetchPostings err: %v", err)
 		}
@@ -237,7 +238,7 @@ func (r *Recall) searchPhrase(queryToken []*queryTokenHash, tokenCursors []searc
 }
 
 // token 根据doc count升序排序
-func (r *Recall) sortToken(postHash engine.InvertedIndexHash) {
+func (r *Recall) sortToken(postHash segment.InvertedIndexHash) {
 	tokenHash := make([]*queryTokenHash, 0)
 	for token, invertedIndex := range postHash {
 		q := new(queryTokenHash)
@@ -256,7 +257,7 @@ func (r *Recall) sortToken(postHash engine.InvertedIndexHash) {
 // NewRecall new
 func NewRecall(e *engine.Engine) *Recall {
 
-	docCount, err := e.ForwardDB.Count()
+	docCount, err := e.Seg[e.CurrSegID].ForwardCount()
 	if err != nil {
 		log.Errorf("db Count error:%v", err)
 		return nil

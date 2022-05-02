@@ -4,6 +4,7 @@ import (
 	"doraemon/conf"
 	"doraemon/internal/engine"
 	"doraemon/internal/recall"
+	"doraemon/internal/segment"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +41,7 @@ func (r *Recall) Get(c *gin.Context) {
 
 // NewRecallServ 创建召回服务
 func NewRecallServ(meta *engine.Meta, c *conf.Config) *Recall {
-	eng := engine.NewEngine(meta, c, engine.SearchMode)
+	eng := engine.NewEngine(meta, c, segment.SearchMode)
 	r := recall.NewRecall(eng)
 	return &Recall{r}
 

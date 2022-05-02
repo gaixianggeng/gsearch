@@ -18,20 +18,20 @@ type ForwardDB struct {
 	db *bolt.DB
 }
 
-// Add add forward data
-func (f *ForwardDB) Add(doc *Document) error {
+// AddForward add forward data
+func (f *ForwardDB) AddForward(doc *Document) error {
 	key := strconv.Itoa(int(doc.DocID))
 	body, _ := json.Marshal(doc)
 	return Put(f.db, forwardBucket, []byte(key), body)
 }
 
-// Put add forward data
-func (f *ForwardDB) Put(key, value []byte) error {
+// PutForward add forward data
+func (f *ForwardDB) PutForward(key, value []byte) error {
 	return Put(f.db, forwardBucket, []byte(key), value)
 }
 
-// Count 获取文档总数
-func (f *ForwardDB) Count() (uint64, error) {
+// ForwardCount 获取文档总数
+func (f *ForwardDB) ForwardCount() (uint64, error) {
 	body, err := Get(f.db, forwardBucket, []byte(ForwardCountKey))
 	if err != nil {
 		return 0, err
@@ -40,19 +40,19 @@ func (f *ForwardDB) Count() (uint64, error) {
 	return uint64(c), err
 }
 
-// UpdateCount 获取文档总数
-func (f *ForwardDB) UpdateCount(count uint64) error {
+// UpdateForwardCount 获取文档总数
+func (f *ForwardDB) UpdateForwardCount(count uint64) error {
 	return Put(f.db, forwardBucket, []byte(ForwardCountKey), []byte(strconv.Itoa(int(count))))
 }
 
-// Get get forward data
-func (f *ForwardDB) Get(docID uint64) ([]byte, error) {
+// GetForward get forward data
+func (f *ForwardDB) GetForward(docID uint64) ([]byte, error) {
 	key := strconv.Itoa(int(docID))
 	return Get(f.db, forwardBucket, []byte(key))
 }
 
-// GetCursor 获取遍历游标
-func (f *ForwardDB) GetCursor(termCh chan KvInfo) {
+// GetForwardCursor 获取遍历游标
+func (f *ForwardDB) GetForwardCursor(termCh chan KvInfo) {
 	f.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(forwardBucket))
 		c := b.Cursor()
@@ -77,33 +77,3 @@ func NewForwardDB(dbName string) *ForwardDB {
 	}
 	return &ForwardDB{db}
 }
-
-// /**
-//  * 将倒排列表存储到数据库中
-//  * @param[in] env 存储着应用程序运行环境的结构体
-//  * @param[in] token_id 词元编号
-//  * @param[in] docs_count 倒排列表中的文档数
-//  * @param[in] postings 待存储的倒排列表
-//  * @param[in] postings_size 倒排列表的字节数
-//  */
-// int db_update_postings(const wiser_env *env, int token_id, int docs_count, void *postings, int postings_size) {
-//     int rc;
-//     sqlite3_reset(env->update_postings_st);
-//     sqlite3_bind_int(env->update_postings_st, 1, docs_count);
-//     sqlite3_bind_blob(env->update_postings_st, 2, postings, (unsigned int)postings_size, SQLITE_STATIC);
-//     sqlite3_bind_int(env->update_postings_st, 3, token_id);
-// query:
-//     rc = sqlite3_step(env->update_postings_st);
-
-//     switch (rc) {
-//         case SQLITE_BUSY:
-//             goto query;
-//         case SQLITE_ERROR:
-//             print_error("ERROR: %s", sqlite3_errmsg(env->db));
-//             break;
-//         case SQLITE_MISUSE:
-//             print_error("MISUSE: %s", sqlite3_errmsg(env->db));
-//             break;
-//     }
-//     return rc;
-// }

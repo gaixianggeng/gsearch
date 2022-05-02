@@ -1,4 +1,4 @@
-package engine
+package segment
 
 import (
 	"doraemon/conf"
@@ -15,7 +15,7 @@ const (
 
 func TestIndex_token2PostingsLists(t *testing.T) {
 	type fields struct {
-		Engine *Engine
+		Engine *Segment
 	}
 	type args struct {
 		bufInvertHash InvertedIndexHash
@@ -80,7 +80,7 @@ func TestIndex_token2PostingsLists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := e.Token2PostingsLists(tt.args.bufInvertHash, tt.args.token, tt.args.position, tt.args.docID); (err != nil) != tt.wantErr {
+			if err := e.token2PostingsLists(tt.args.bufInvertHash, tt.args.token, tt.args.position, tt.args.docID); (err != nil) != tt.wantErr {
 				t.Errorf("Index.token2PostingsLists() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			count := tt.args.bufInvertHash[tt.args.token].PositionCount
@@ -145,17 +145,12 @@ func TestEngineFetchPostings(t *testing.T) {
 	}
 }
 
-func newEng(mode Mode) *Engine {
+func newEng(mode Mode) *Segment {
 	c, err := conf.ReadConf("../../conf/conf.toml")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	meta, err := ParseMeta(c)
-	if err != nil {
-		log.Fatal(err)
-	}
-	eng := NewEngine(meta, c, mode)
+	eng := NewSegment(0, c)
 	return eng
 
 }

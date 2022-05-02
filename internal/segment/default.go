@@ -1,4 +1,4 @@
-package engine
+package segment
 
 var (
 	// TermDBSuffix term db suffix
@@ -12,16 +12,4 @@ var (
 	termName     = ""
 	invertedName = ""
 	forwardName  = ""
-)
-
-// Mode 查询or索引模式
-type Mode int32
-
-const (
-	// SearchMode 查询模式
-	SearchMode Mode = 1
-	// IndexMode 索引模式
-	IndexMode Mode = 2
-	// MergeMode seg merge模式
-	MergeMode Mode = 3
 )

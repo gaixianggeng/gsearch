@@ -25,7 +25,7 @@ func TestForwardDB_Count(t *testing.T) {
 			f := &ForwardDB{
 				db: db,
 			}
-			got, err := f.Count()
+			got, err := f.ForwardCount()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ForwardDB.Count() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -57,30 +57,30 @@ func (t *InvertedDB) StoragePostings(token string, values []byte, docCount uint6
 	//update offset
 	t.offset += size
 
-	return t.Put([]byte(token), buf.Bytes())
+	return t.PutInverted([]byte(token), buf.Bytes())
 }
 
-// Put 插入term
-func (t *InvertedDB) Put(key, value []byte) error {
+// PutInverted 插入term
+func (t *InvertedDB) PutInverted(key, value []byte) error {
 	return Put(t.db, termBucket, key, value)
 }
 
-// Get 通过term获取value
-func (t *InvertedDB) Get(key []byte) (value []byte, err error) {
+// GetInverted 通过term获取value
+func (t *InvertedDB) GetInverted(key []byte) (value []byte, err error) {
 	return Get(t.db, termBucket, key)
 }
 
 // GetTermInfo 获取term关联的倒排地址
 func (t *InvertedDB) GetTermInfo(token string) (*TermValue, error) {
-	c, err := t.Get([]byte(token))
+	c, err := t.GetInverted([]byte(token))
 	if err != nil {
 		return nil, fmt.Errorf("GetTermInfo err:%v", err)
 	}
 	return Bytes2TermVal(c)
 }
 
-// GetDocInfo 根据地址获取读取文件
-func (t *InvertedDB) GetDocInfo(offset uint64, size uint64) ([]byte, error) {
+// GetInvertedDoc 根据地址获取读取文件
+func (t *InvertedDB) GetInvertedDoc(offset uint64, size uint64) ([]byte, error) {
 	page := os.Getpagesize()
 	b, err := Mmap(int(t.file.Fd()), int64(offset/uint64(page)), int(offset+size))
 	if err != nil {
@@ -89,8 +89,8 @@ func (t *InvertedDB) GetDocInfo(offset uint64, size uint64) ([]byte, error) {
 	return b[offset : offset+size], nil
 }
 
-// GetTermCursor 获取遍历游标
-func (t *InvertedDB) GetTermCursor(termCh chan KvInfo) {
+// GetInvertedTermCursor 获取遍历游标
+func (t *InvertedDB) GetInvertedTermCursor(termCh chan KvInfo) {
 	t.db.View(func(tx *bolt.Tx) error {
 		// Assume bucket exists and has keys
 		b := tx.Bucket([]byte(termBucket))

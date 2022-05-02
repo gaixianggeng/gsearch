@@ -65,7 +65,7 @@ func start(c *conf.Config, meta *engine.Meta) {
 
 // 获取flag参数
 func flagInit() {
-	flag.Int64Var(&action, "action", 1, "start action 1:serv 2:index")
+	flag.Int64Var(&action, "flag", 1, "start flag 1:serv 2:index")
 	flag.Parse()
 }
 

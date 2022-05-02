@@ -3,6 +3,7 @@ package recall
 import (
 	"doraemon/conf"
 	"doraemon/internal/engine"
+	"doraemon/internal/segment"
 	"fmt"
 	"os"
 	"path"
@@ -22,20 +23,20 @@ const (
 func TestRecall_sortToken(t *testing.T) {
 
 	type args struct {
-		postHash engine.InvertedIndexHash
+		postHash segment.InvertedIndexHash
 	}
 
-	hash := engine.InvertedIndexHash{
-		"北京": &engine.InvertedIndexValue{
+	hash := segment.InvertedIndexHash{
+		"北京": &segment.InvertedIndexValue{
 			DocCount: 9,
 		},
-		"成都": &engine.InvertedIndexValue{
+		"成都": &segment.InvertedIndexValue{
 			DocCount: 4,
 		},
-		"上海": &engine.InvertedIndexValue{
+		"上海": &segment.InvertedIndexValue{
 			DocCount: 6,
 		},
-		"深圳": &engine.InvertedIndexValue{
+		"深圳": &segment.InvertedIndexValue{
 			DocCount: 0,
 		},
 	}
@@ -126,7 +127,7 @@ func newEng() *engine.Engine {
 	if err != nil {
 		log.Fatal(err)
 	}
-	eng := engine.NewEngine(meta, c, engine.SearchMode)
+	eng := engine.NewEngine(meta, c, segment.SearchMode)
 	return eng
 
 }

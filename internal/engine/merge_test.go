@@ -1,8 +1,7 @@
-package index
+package engine
 
 import (
 	"doraemon/conf"
-	"doraemon/internal/engine"
 	"doraemon/pkg/utils"
 	"encoding/json"
 	"testing"
@@ -18,7 +17,7 @@ func TestMergeScheduler_mayMerge(t *testing.T) {
 	}
 	c.Storage.Path = "../../data/"
 
-	meta, err := engine.ParseMeta(c)
+	meta, err := ParseMeta(c)
 	if err != nil {
 		t.Error(err)
 		return
@@ -27,7 +26,7 @@ func TestMergeScheduler_mayMerge(t *testing.T) {
 		t.Error("meta is nil")
 		return
 	}
-	cont, _ := json.Marshal(meta.SegInfo)
+	cont, _ := json.Marshal(meta.SegMeta.SegInfo)
 	t.Logf("seg info:%s:", cont)
 
 	m := NewScheduleer(meta, c)

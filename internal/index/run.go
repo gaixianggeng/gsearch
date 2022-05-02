@@ -11,19 +11,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const endFlag = 1
-
 // Run 索引写入入口
 func Run(meta *engine.Meta, conf *conf.Config) {
 
 	log.Infof("index run...")
-	index, err := NewIndexEngine(engine.NewEngine(meta, conf, engine.IndexMode), conf)
+	index, err := NewIndexEngine(meta, conf)
 	if err != nil {
 		panic(err)
 	}
 	defer index.Close()
-
-	go index.scheduler.Merge()
 
 	addDoc(index)
 	log.Infof("index run end")
@@ -44,13 +40,9 @@ func addDoc(in *Index) {
 			log.Errorf("AddDocument err: %v", err)
 			break
 		}
-		// // 达到阈值
-		if len(in.PostingsHashBuf) > 0 && (in.BufCount >= in.BufSize) {
-			in.Flush()
-		}
 	}
 	// 读取结束 写入磁盘
-	in.Flush(endFlag)
+	in.Flush(true)
 }
 
 func doc2Struct(docStr string) (*storage.Document, error) {

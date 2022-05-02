@@ -1,4 +1,4 @@
-package engine
+package segment
 
 import (
 	"encoding/binary"
