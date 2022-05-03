@@ -28,6 +28,7 @@ func Run(meta *engine.Meta, conf *conf.Config) {
 func addDoc(in *Index) {
 	log.Infof("addDoc start")
 	docList := readFiles(in.Conf.Source.Files)
+	go in.Scheduler.Merge()
 	for _, item := range docList {
 		doc, err := doc2Struct(item)
 		if err != nil {

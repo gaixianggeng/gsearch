@@ -34,6 +34,7 @@ func MergePostings(pa, pb *PostingsList) *PostingsList {
 			temp = pb
 			pb = pb.Next
 		} else {
+			log.Info("break")
 			break
 		}
 		temp.Next = nil

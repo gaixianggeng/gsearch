@@ -23,7 +23,7 @@ type LoserTree struct {
 // TermNode --
 type TermNode struct {
 	*storage.KvInfo
-	DB *Segment // 主要用来调用intervted的相关方法
+	Seg *Segment // 主要用来调用intervted的相关方法
 }
 
 // NewSegLoserTree 败者树
@@ -177,7 +177,7 @@ func MergeKTermSegments(list []*TermNode, chList []chan storage.KvInfo) (Inverte
 		}
 		// 解码
 		log.Debugf("val:%+v", val)
-		c, err := node.DB.GetInvertedDoc(val.Offset, val.Size)
+		c, err := node.Seg.GetInvertedDoc(val.Offset, val.Size)
 		if err != nil {
 			return nil, fmt.Errorf("FetchPostings getDocInfo err: %v", err)
 		}

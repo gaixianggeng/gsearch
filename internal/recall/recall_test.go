@@ -41,9 +41,6 @@ func TestRecall_sortToken(t *testing.T) {
 		},
 	}
 
-	eng := newEng()
-	defer eng.Close()
-
 	tests := []struct {
 		name string
 		args args
@@ -53,9 +50,10 @@ func TestRecall_sortToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Recall{
-				Engine: eng,
-			}
+
+			r := newRecall()
+			defer r.Close()
+
 			r.sortToken(tt.args.postHash)
 			if r.queryToken == nil || len(r.queryToken) == 0 {
 				t.Errorf("sortToken() error")
@@ -86,9 +84,7 @@ func TestRecall_Search(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Log("before")
-
-			eng := newEng()
-			r := NewRecall(eng)
+			r := newRecall()
 			defer r.Close()
 
 			got, err := r.Search(tt.args.query)
@@ -116,7 +112,7 @@ func init() {
 	})
 }
 
-func newEng() *engine.Engine {
+func newRecall() *Recall {
 	c, err := conf.ReadConf("../../conf/conf.toml")
 	if err != nil {
 		log.Fatal(err)
@@ -127,7 +123,7 @@ func newEng() *engine.Engine {
 	if err != nil {
 		log.Fatal(err)
 	}
-	eng := engine.NewEngine(meta, c, segment.SearchMode)
-	return eng
 
+	r := NewRecall(meta, c)
+	return r
 }

@@ -1,6 +1,7 @@
 package recall
 
 import (
+	"doraemon/conf"
 	"doraemon/internal/engine"
 	"doraemon/internal/segment"
 	"fmt"
@@ -14,7 +15,7 @@ type Recall struct {
 	*engine.Engine
 	docCount     uint64 // 文档总数，用于计算相关性
 	enablePhrase bool
-	queryToken   []*queryTokenHash
+	// queryToken   []*queryTokenHash
 }
 
 // 用于实现排序map
@@ -53,12 +54,12 @@ func (r *Recall) Search(query string) (Recalls, error) {
 		log.Errorf("splitQuery2Tokens err: %v", err)
 		return nil, fmt.Errorf("splitQuery2Tokens err: %v", err)
 	}
-	r.sortToken(r.Engine.Seg[r.Engine.CurrSegID].PostingsHashBuf)
-	if len(r.queryToken) == 0 {
+	tokens := r.sortToken(r.Engine.PostingsHashBuf)
+	if len(tokens) == 0 {
 		return nil, fmt.Errorf("queryTokenHash is nil")
 	}
 
-	recall, err := r.searchDoc()
+	recall, err := r.searchDoc(tokens)
 	if err != nil {
 		log.Errorf("searchDoc err: %v", err)
 		return nil, fmt.Errorf("searchDoc err: %v", err)
@@ -75,20 +76,22 @@ func (r *Recall) splitQuery2Tokens(query string) error {
 	return nil
 }
 
-func (r *Recall) searchDoc() (Recalls, error) {
+func (r *Recall) searchDoc(tokens []*queryTokenHash) (Recalls, error) {
 
 	recalls := make(Recalls, 0)
 
-	tokenCount := len(r.queryToken)
+	tokenCount := len(tokens)
 	cursors := make([]searchCursor, tokenCount)
 
 	// 为每个token初始化游标
-	for i, t := range r.queryToken {
+	for i, t := range tokens {
 		// 正常不会出现，以防未知bug，所以设置fatal
 		if t.token == "" {
 			return nil, fmt.Errorf("token is nil")
 		}
-		postings, _, err := r.Engine.Seg[r.Engine.CurrSegID].FetchPostings(t.token)
+		// postings, _, err := r.Engine.Seg[r.Engine.CurrSegID].FetchPostings(t.token)
+
+		postings, _, err := r.fetchPostingsBySegs(t.token)
 		if err != nil {
 			return nil, fmt.Errorf("fetchPostings err: %v", err)
 		}
@@ -136,7 +139,7 @@ func (r *Recall) searchDoc() (Recalls, error) {
 			// 有匹配上的docid
 			phraseCount := int64(-1)
 			if r.enablePhrase {
-				phraseCount = r.searchPhrase(r.queryToken, cursors)
+				phraseCount = r.searchPhrase(tokens, cursors)
 			}
 			score := 0.0
 			if phraseCount > 0 {
@@ -150,6 +153,27 @@ func (r *Recall) searchDoc() (Recalls, error) {
 	}
 	log.Infof("recalls size:%v", len(recalls))
 	return recalls, nil
+}
+
+// 获取token所有seg的倒排表数据
+func (r *Recall) fetchPostingsBySegs(token string) (*segment.PostingsList, uint64, error) {
+	postings := &segment.PostingsList{}
+	postings = nil
+	doc := uint64(0)
+	for i, seg := range r.Engine.Seg {
+		p, c, err := seg.FetchPostings(token)
+		if err != nil {
+			return nil, 0, fmt.Errorf("seg index:%d,token:%sfetchPostings err:%v", i, token, err)
+		}
+
+		log.Infof("pos:%v", p)
+		postings = segment.MergePostings(postings, p)
+		log.Infof("pos next:%v", postings.Next)
+		doc += c
+	}
+	log.Infof("token:%v,pos:%v,doc:%v", token, postings, doc)
+	return postings, doc, nil
+	// return r.Engine.Seg[r.Engine.CurrSegID].FetchPostings(token)
 }
 
 // 计算相关性
@@ -238,7 +262,7 @@ func (r *Recall) searchPhrase(queryToken []*queryTokenHash, tokenCursors []searc
 }
 
 // token 根据doc count升序排序
-func (r *Recall) sortToken(postHash segment.InvertedIndexHash) {
+func (r *Recall) sortToken(postHash segment.InvertedIndexHash) []*queryTokenHash {
 	tokenHash := make([]*queryTokenHash, 0)
 	for token, invertedIndex := range postHash {
 		q := new(queryTokenHash)
@@ -247,22 +271,24 @@ func (r *Recall) sortToken(postHash segment.InvertedIndexHash) {
 		tokenHash = append(tokenHash, q)
 	}
 	sort.Sort(docCountSort(tokenHash))
-	r.queryToken = tokenHash
-	for _, t := range r.queryToken {
+	for _, t := range tokenHash {
 		log.Debugf("token:%v,docCount:%v", t.token, t.invertedIndex.DocCount)
 	}
-	return
+	return tokenHash
 }
 
 // NewRecall new
-func NewRecall(e *engine.Engine) *Recall {
+func NewRecall(meta *engine.Meta, c *conf.Config) *Recall {
+	e := engine.NewEngine(meta, c, segment.SearchMode)
 
-	docCount, err := e.Seg[e.CurrSegID].ForwardCount()
-	if err != nil {
-		log.Errorf("db Count error:%v", err)
-		return nil
+	docCount := uint64(0)
+	for _, seg := range e.Seg {
+		num, err := seg.ForwardCount()
+		if err != nil {
+			log.Fatal(err)
+		}
+		docCount += num
 	}
 	log.Infof("docCount:%d", docCount)
-
-	return &Recall{e, docCount, true, nil}
+	return &Recall{e, docCount, true}
 }

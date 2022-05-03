@@ -5,7 +5,6 @@ import (
 	"doraemon/internal/segment"
 	"doraemon/internal/storage"
 	"doraemon/pkg/utils"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -65,9 +64,9 @@ func (m *MergeScheduler) Close() {
 
 }
 
-// 判断是否需要merge
+// MayMerge 判断是否需要merge
 // 通过meta数据中的seginfo来计算
-func (m *MergeScheduler) mayMerge() {
+func (m *MergeScheduler) MayMerge() {
 	// 已存在超过2个segment，则需要判断seg是否需要merge
 	if len(m.Meta.SegMeta.SegInfo) <= 1 {
 		log.Infof("seg count: %v, no need merge", len(m.Meta.SegMeta.SegInfo))
@@ -153,7 +152,7 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 	forChs := make([]chan storage.KvInfo, 0)
 	for _, seg := range segmentDBs {
 		termNode := new(segment.TermNode)
-		termNode.DB = seg
+		termNode.Seg = seg
 
 		// 开启协程遍历读取
 		termCh := make(chan storage.KvInfo)
@@ -176,30 +175,31 @@ func (m *MergeScheduler) mergeSegments(segs *MergeMessage) error {
 		return err
 	}
 
-	targetEng := NewEngine(m.Meta, m.conf, segment.MergeMode)
-
+	en := NewEngine(m.Meta, m.conf, segment.MergeMode)
 	// 落盘
-	for token, pos := range res {
-		c, _ := json.Marshal(pos)
-		log.Infof("token:%s count:%d,pos:%s", token, pos.DocCount, c)
-		err := targetEng.StoragePostings(pos)
-		if err != nil {
-			log.Errorf("storage postings err:%v", err)
-			return err
-		}
-	}
+	en.Seg[en.CurrSegID].Flush(res)
+
+	// for token, pos := range res {
+	// 	c, _ := json.Marshal(pos)
+	// 	log.Infof("token:%s count:%d,pos:%s", token, pos.DocCount, c)
+	// 	err := targetEng.StoragePostings(pos)
+	// 	if err != nil {
+	// 		log.Errorf("storage postings err:%v", err)
+	// 		return err
+	// 	}
+	// }
 
 	log.Debugf("start forwatd:%s", strings.Repeat("-", 20))
 
 	// 合并正排数据
-	err = segment.MergeKForwardSegments(targetEng.Seg[targetEng.CurrSegID], forNodes, forChs)
+	err = segment.MergeKForwardSegments(en.Seg[en.CurrSegID], forNodes, forChs)
 	if err != nil {
 		log.Errorf("forward merge error: %v", err)
 		return err
 	}
 
 	// update meta info
-	err = m.Meta.UpdateSegMeta(targetEng.CurrSegID, docSize)
+	err = m.Meta.UpdateSegMeta(en.CurrSegID, docSize)
 	if err != nil {
 		log.Errorf("update seg meta err:%v", err)
 		return err

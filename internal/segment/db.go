@@ -23,9 +23,9 @@ type InvertedIndexValue struct {
 type InvertedIndexHash map[string]*InvertedIndexValue
 
 // CreateNewInvertedIndex 创建倒排索引
-func CreateNewInvertedIndex(token string, termValue *storage.TermValue) *InvertedIndexValue {
+func CreateNewInvertedIndex(token string, docCount uint64) *InvertedIndexValue {
 	p := new(InvertedIndexValue)
-	p.DocCount = termValue.DocCount
+	p.DocCount = docCount
 	p.Token = token
 	p.PositionCount = 0
 	p.PostingsList = new(PostingsList)

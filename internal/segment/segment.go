@@ -3,7 +3,6 @@ package segment
 import (
 	"bytes"
 	"doraemon/conf"
-	"doraemon/internal/query"
 	"doraemon/internal/storage"
 	"fmt"
 
@@ -14,48 +13,12 @@ import (
 type Segment struct {
 	*storage.ForwardDB
 	*storage.InvertedDB
+
 	conf *conf.Config
-
-	BufCount uint64 // 倒排索引缓冲区的文档数
-	BufSize  uint64 // 设定的缓冲区大小
-
-	PostingsHashBuf InvertedIndexHash // 倒排索引缓冲区
 }
 
-// Text2PostingsLists --
-func (e *Segment) Text2PostingsLists(meta *SegMeta, tokens []query.Tokenization, docID uint64) error {
-
-	bufInvertedHash := make(InvertedIndexHash)
-
-	for _, token := range tokens {
-		err := e.token2PostingsLists(bufInvertedHash, token.Token, token.Position, docID)
-		if err != nil {
-			return fmt.Errorf("text2PostingsLists token2PostingsLists err: %v", err)
-		}
-	}
-	log.Debugf("bufInvertedHash:%v", bufInvertedHash)
-
-	if e.PostingsHashBuf != nil && len(e.PostingsHashBuf) > 0 {
-		// 合并命中相同的token的不同doc
-		MergeInvertedIndex(e.PostingsHashBuf, bufInvertedHash)
-	} else {
-		e.PostingsHashBuf = make(InvertedIndexHash)
-		e.PostingsHashBuf = bufInvertedHash
-	}
-	e.BufCount++
-	return nil
-}
-
-// IsNeedFlush 是否需要落盘
-func (e *Segment) IsNeedFlush() bool {
-	if len(e.PostingsHashBuf) > 0 && (e.BufCount >= e.BufSize) {
-		return true
-	}
-	return false
-}
-
-// token2PostingsLists --
-func (e *Segment) token2PostingsLists(bufInvertHash InvertedIndexHash, token string,
+// Token2PostingsLists --
+func Token2PostingsLists(bufInvertHash InvertedIndexHash, token string,
 	position uint64, docID uint64) error {
 
 	// init
@@ -74,21 +37,21 @@ func (e *Segment) token2PostingsLists(bufInvertHash InvertedIndexHash, token str
 		// 这里统计的是同一个docid的position的个数
 		pl.PositionCount++
 	} else {
-		// 不为空表示写入操作，否则为查询
-		termValue := new(storage.TermValue)
-		if docID != 0 {
-			termValue.DocCount = 1
-			// docCount = 1
-		} else {
-			// docCount 用于召回排序使用
-			var err error
-			termValue, err = e.getTokenCount(token)
-			if err != nil {
-				return fmt.Errorf("token2PostingsLists GetTokenID err: %v", err)
-			}
-
-		}
-		bufInvert = CreateNewInvertedIndex(token, termValue)
+		// // 不为空表示写入操作，否则为查询
+		// termValue := new(storage.TermValue)
+		// if docID != 0 {
+		// 	termValue.DocCount = 1
+		// 	// docCount = 1
+		// } else {
+		// 	// docCount 用于召回排序使用
+		// 	var err error
+		// 	termValue, err = e.getTokenCount(token)
+		// 	if err != nil {
+		// 		return fmt.Errorf("token2PostingsLists GetTokenID err: %v", err)
+		// 	}
+		// }
+		docCount := uint64(1)
+		bufInvert = CreateNewInvertedIndex(token, docCount)
 		bufInvertHash[token] = bufInvert
 		pl = CreateNewPostingsList(docID)
 		bufInvert.PostingsList = pl
@@ -132,16 +95,16 @@ func (e *Segment) FetchPostings(token string) (*PostingsList, uint64, error) {
 }
 
 // Flush 落盘操作
-func (s *Segment) Flush() error {
-	if len(s.PostingsHashBuf) == 0 {
+func (e *Segment) Flush(PostingsHashBuf InvertedIndexHash) error {
+	if len(PostingsHashBuf) == 0 {
 		log.Warnf("Flush err: %v", "in.PostingsHashBuf is empty")
 		return nil
 	}
-	log.Debugf("start storage...%v,len:%d", s.PostingsHashBuf, len(s.PostingsHashBuf))
-	// title = ""表示文件读取结束
-	for token, invertedIndex := range s.PostingsHashBuf {
+	log.Debugf("start storage...%v,len:%d", PostingsHashBuf, len(PostingsHashBuf))
+
+	for token, invertedIndex := range PostingsHashBuf {
 		log.Debugf("token:%s,invertedIndex:%v\n", token, invertedIndex)
-		err := s.storagePostings(invertedIndex)
+		err := e.storagePostings(invertedIndex)
 		if err != nil {
 			log.Errorf("updatePostings err: %v", err)
 			return fmt.Errorf("updatePostings err: %v", err)
@@ -184,7 +147,7 @@ func NewSegments(meta *SegMeta, conf *conf.Config, mode Mode) (SegID, map[SegID]
 		segs[segID] = seg
 		return segID, segs
 	}
-
+	log.Debugf("meta:%v", meta)
 	for segID := range meta.SegInfo {
 		seg := NewSegment(segID, conf)
 		log.Infof("dbInit segID:%v,next:%v", segID, meta.NextSeg)
@@ -196,14 +159,10 @@ func NewSegments(meta *SegMeta, conf *conf.Config, mode Mode) (SegID, map[SegID]
 
 // NewSegment 创建新的segment
 func NewSegment(segID SegID, conf *conf.Config) *Segment {
-
-	postingsHashBuf := make(InvertedIndexHash)
 	inDB, forDB := dbInit(segID, conf)
 	return &Segment{
-		PostingsHashBuf: postingsHashBuf,
-		InvertedDB:      inDB,
-		ForwardDB:       forDB,
-		BufSize:         5,
-		conf:            conf,
+		InvertedDB: inDB,
+		ForwardDB:  forDB,
+		conf:       conf,
 	}
 }

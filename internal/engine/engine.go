@@ -12,11 +12,15 @@ import (
 
 // Engine 写入引擎
 type Engine struct {
-	CurrSegID segment.SegID //当前engine关联的segID 查询时为-1
-	Seg       map[segment.SegID]*segment.Segment
 	meta      *Meta // 元数据
 	conf      *conf.Config
-	scheduler *MergeScheduler
+	Scheduler *MergeScheduler
+
+	BufCount        uint64                             // 倒排索引缓冲区的文档数
+	BufSize         uint64                             // 设定的缓冲区大小
+	PostingsHashBuf segment.InvertedIndexHash          // 倒排索引缓冲区
+	CurrSegID       segment.SegID                      // 当前engine关联的segID 查询时为-1
+	Seg             map[segment.SegID]*segment.Segment // 当前engine关联的segment
 
 	N int32 // ngram
 
@@ -30,20 +34,37 @@ func (e *Engine) AddDoc(doc *storage.Document) error {
 // Text2PostingsLists --
 func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
 
-	go e.scheduler.Merge()
 	tokens, err := query.Ngram(text, e.N)
 	if err != nil {
 		return fmt.Errorf("text2PostingsLists Ngram err: %v", err)
 	}
-	err = e.Seg[e.CurrSegID].Text2PostingsLists(e.meta.SegMeta, tokens, docID)
-	if err != nil {
-		return fmt.Errorf("text2PostingsLists err: %v", err)
+
+	bufInvertedHash := make(segment.InvertedIndexHash)
+
+	for _, token := range tokens {
+		err := segment.Token2PostingsLists(bufInvertedHash, token.Token, token.Position, docID)
+		if err != nil {
+			return fmt.Errorf("text2PostingsLists token2PostingsLists err: %v", err)
+		}
 	}
+	log.Debugf("bufInvertedHash:%v", bufInvertedHash)
+
+	if e.PostingsHashBuf != nil && len(e.PostingsHashBuf) > 0 {
+		// 合并命中相同的token的不同doc
+		segment.MergeInvertedIndex(e.PostingsHashBuf, bufInvertedHash)
+	} else {
+		// 已经初始化过了
+		e.PostingsHashBuf = bufInvertedHash
+	}
+
+	e.BufCount++
+
 	// 达到阈值
-	if e.Seg[e.CurrSegID].IsNeedFlush() {
+	if len(e.PostingsHashBuf) > 0 && (e.BufCount >= e.BufSize) {
 		log.Infof("text2PostingsLists need flush")
 		e.Flush()
 	}
+
 	e.indexCount()
 	return nil
 }
@@ -51,10 +72,10 @@ func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
 // Flush --
 func (e *Engine) Flush(isEnd ...bool) error {
 
-	e.Seg[e.CurrSegID].Flush()
+	e.Seg[e.CurrSegID].Flush(e.PostingsHashBuf)
 
 	// update meta info
-	err := e.meta.UpdateSegMeta(e.CurrSegID, e.Seg[e.CurrSegID].BufCount)
+	err := e.meta.UpdateSegMeta(e.CurrSegID, e.BufCount)
 	if err != nil {
 		log.Errorf("update seg meta err:%v", err)
 		return err
@@ -64,7 +85,7 @@ func (e *Engine) Flush(isEnd ...bool) error {
 	delete(e.Seg, e.CurrSegID)
 
 	if len(e.meta.SegMeta.SegInfo) > 1 {
-		e.scheduler.mayMerge()
+		e.Scheduler.MayMerge()
 	}
 
 	// new
@@ -72,13 +93,16 @@ func (e *Engine) Flush(isEnd ...bool) error {
 		return nil
 	}
 	segID, seg := segment.NewSegments(e.meta.SegMeta, e.conf, segment.IndexMode)
+
+	e.BufCount = 0
+	e.PostingsHashBuf = make(segment.InvertedIndexHash)
 	e.CurrSegID = segID
 	e.Seg = seg
 	return nil
 
 }
 
-// UpdateCount --
+// UpdateCount 更新文档数量
 func (e *Engine) UpdateCount(num uint64) error {
 	seg := e.Seg[e.CurrSegID]
 	count, err := seg.ForwardCount()
@@ -93,31 +117,28 @@ func (e *Engine) UpdateCount(num uint64) error {
 	return seg.UpdateForwardCount(count)
 }
 
+// indexCount index计数
 func (e *Engine) indexCount() {
 	e.meta.Lock()
 	e.meta.IndexCount++
 	e.meta.Unlock()
 }
 
-// func (e *Engine) Flush() error {
-// 	return e.Seg[e.CurrSegID].Flush()
+// // StoragePostings 落盘
+// func (e *Engine) StoragePostings(p *segment.InvertedIndexValue) error {
+// 	if p == nil {
+// 		return fmt.Errorf("updatePostings p is nil")
+// 	}
+
+// 	// 编码
+// 	buf, err := segment.EncodePostings(p.PostingsList, p.DocCount)
+// 	if err != nil {
+// 		return fmt.Errorf("updatePostings encodePostings err: %v", err)
+// 	}
+
+// 	// 开始写入数据库
+// 	return e.Seg[e.CurrSegID].InvertedDB.StoragePostings(p.Token, buf.Bytes(), p.DocCount)
 // }
-
-// StoragePostings 落盘
-func (e *Engine) StoragePostings(p *segment.InvertedIndexValue) error {
-	if p == nil {
-		return fmt.Errorf("updatePostings p is nil")
-	}
-
-	// 编码
-	buf, err := segment.EncodePostings(p.PostingsList, p.DocCount)
-	if err != nil {
-		return fmt.Errorf("updatePostings encodePostings err: %v", err)
-	}
-
-	// 开始写入数据库
-	return e.Seg[e.CurrSegID].InvertedDB.StoragePostings(p.Token, buf.Bytes(), p.DocCount)
-}
 
 // Close --
 func (e *Engine) Close() {
@@ -125,7 +146,7 @@ func (e *Engine) Close() {
 		seg.Close()
 	}
 
-	e.scheduler.Close()
+	e.Scheduler.Close()
 }
 
 // NewEngine --
@@ -135,11 +156,13 @@ func NewEngine(meta *Meta, conf *conf.Config, engineMode segment.Mode) *Engine {
 	sche := NewScheduleer(meta, conf)
 	segID, seg := segment.NewSegments(meta.SegMeta, conf, engineMode)
 	return &Engine{
-		CurrSegID: segID,
-		Seg:       seg,
-		N:         2,
-		meta:      meta,
-		conf:      conf,
-		scheduler: sche,
+		CurrSegID:       segID,
+		Seg:             seg,
+		N:               2,
+		meta:            meta,
+		conf:            conf,
+		Scheduler:       sche,
+		PostingsHashBuf: make(segment.InvertedIndexHash),
+		BufSize:         5,
 	}
 }
