@@ -6,6 +6,7 @@ import (
 	"doraemon/internal/segment"
 	"fmt"
 	"sort"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -22,6 +23,7 @@ type Recall struct {
 type queryTokenHash struct {
 	token         string
 	invertedIndex *segment.InvertedIndexValue
+	fetchPostings *segment.PostingsList
 }
 
 // SearchItem 查询结果
@@ -54,12 +56,12 @@ func (r *Recall) Search(query string) (Recalls, error) {
 		log.Errorf("splitQuery2Tokens err: %v", err)
 		return nil, fmt.Errorf("splitQuery2Tokens err: %v", err)
 	}
-	tokens := r.sortToken(r.Engine.PostingsHashBuf)
-	if len(tokens) == 0 {
-		return nil, fmt.Errorf("queryTokenHash is nil")
-	}
+	// tokens := r.sortToken(r.Engine.PostingsHashBuf)
+	// if len(tokens) == 0 {
+	// 	return nil, fmt.Errorf("queryTokenHash is nil")
+	// }
 
-	recall, err := r.searchDoc(tokens)
+	recall, err := r.searchDoc()
 	if err != nil {
 		log.Errorf("searchDoc err: %v", err)
 		return nil, fmt.Errorf("searchDoc err: %v", err)
@@ -76,22 +78,21 @@ func (r *Recall) splitQuery2Tokens(query string) error {
 	return nil
 }
 
-func (r *Recall) searchDoc(tokens []*queryTokenHash) (Recalls, error) {
+func (r *Recall) searchDoc() (Recalls, error) {
 
 	recalls := make(Recalls, 0)
 
-	tokenCount := len(tokens)
-	cursors := make([]searchCursor, tokenCount)
+	tokens := make([]*queryTokenHash, 0)
 
 	// 为每个token初始化游标
-	for i, t := range tokens {
+	for token, post := range r.PostingsHashBuf {
 		// 正常不会出现，以防未知bug，所以设置fatal
-		if t.token == "" {
+		if token == "" {
 			return nil, fmt.Errorf("token is nil")
 		}
 		// postings, _, err := r.Engine.Seg[r.Engine.CurrSegID].FetchPostings(t.token)
 
-		postings, _, err := r.fetchPostingsBySegs(t.token)
+		postings, count, err := r.fetchPostingsBySegs(token)
 		if err != nil {
 			return nil, fmt.Errorf("fetchPostings err: %v", err)
 		}
@@ -99,9 +100,27 @@ func (r *Recall) searchDoc(tokens []*queryTokenHash) (Recalls, error) {
 			return nil, fmt.Errorf("postings is nil")
 		}
 
-		log.Debugf("token:%v,invertedIndex:%v", t.token, postings.DocID)
-		cursors[i].doc = postings
-		cursors[i].current = postings
+		log.Debugf("token:%v,invertedIndex:%v", token, postings.DocID)
+		// cursors[i].doc = postings
+		// cursors[i].current = postings
+
+		post.DocCount = count
+		t := &queryTokenHash{
+			token:         token,
+			invertedIndex: post,
+			fetchPostings: postings,
+		}
+		tokens = append(tokens, t)
+	}
+
+	tokens = r.sortToken(tokens)
+
+	tokenCount := len(tokens)
+	cursors := make([]searchCursor, tokenCount)
+
+	for i, t := range tokens {
+		cursors[i].doc = t.fetchPostings
+		cursors[i].current = t.fetchPostings
 	}
 
 	// 整个遍历token来匹配doc
@@ -159,7 +178,7 @@ func (r *Recall) searchDoc(tokens []*queryTokenHash) (Recalls, error) {
 func (r *Recall) fetchPostingsBySegs(token string) (*segment.PostingsList, uint64, error) {
 	postings := &segment.PostingsList{}
 	postings = nil
-	doc := uint64(0)
+	docCount := uint64(0)
 	for i, seg := range r.Engine.Seg {
 		p, c, err := seg.FetchPostings(token)
 		if err != nil {
@@ -169,10 +188,10 @@ func (r *Recall) fetchPostingsBySegs(token string) (*segment.PostingsList, uint6
 		log.Infof("pos:%v", p)
 		postings = segment.MergePostings(postings, p)
 		log.Infof("pos next:%v", postings.Next)
-		doc += c
+		docCount += c
 	}
-	log.Infof("token:%v,pos:%v,doc:%v", token, postings, doc)
-	return postings, doc, nil
+	log.Infof("token:%v,pos:%v,doc:%v", token, postings, docCount)
+	return postings, docCount, nil
 	// return r.Engine.Seg[r.Engine.CurrSegID].FetchPostings(token)
 }
 
@@ -262,19 +281,24 @@ func (r *Recall) searchPhrase(queryToken []*queryTokenHash, tokenCursors []searc
 }
 
 // token 根据doc count升序排序
-func (r *Recall) sortToken(postHash segment.InvertedIndexHash) []*queryTokenHash {
-	tokenHash := make([]*queryTokenHash, 0)
-	for token, invertedIndex := range postHash {
-		q := new(queryTokenHash)
-		q.token = token
-		q.invertedIndex = invertedIndex
-		tokenHash = append(tokenHash, q)
-	}
-	sort.Sort(docCountSort(tokenHash))
-	for _, t := range tokenHash {
+func (r *Recall) sortToken(tokens []*queryTokenHash) []*queryTokenHash {
+	// tokenHash := make([]*queryTokenHash, 0)
+	// for token, invertedIndex := range postHash {
+	// 	q := new(queryTokenHash)
+	// 	q.token = token
+	// 	q.invertedIndex = invertedIndex
+	// 	tokenHash = append(tokenHash, q)
+	// }
+	for _, t := range tokens {
 		log.Debugf("token:%v,docCount:%v", t.token, t.invertedIndex.DocCount)
 	}
-	return tokenHash
+	log.Debugf(strings.Repeat("-", 20))
+	sort.Sort(docCountSort(tokens))
+	for _, t := range tokens {
+		log.Debugf("token:%v,docCount:%v", t.token, t.invertedIndex.DocCount)
+	}
+	log.Debugf(strings.Repeat("-", 20))
+	return tokens
 }
 
 // NewRecall new

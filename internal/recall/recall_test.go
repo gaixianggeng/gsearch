@@ -54,12 +54,12 @@ func TestRecall_sortToken(t *testing.T) {
 			r := newRecall()
 			defer r.Close()
 
-			r.sortToken(tt.args.postHash)
-			if r.queryToken == nil || len(r.queryToken) == 0 {
+			tokens := r.sortToken(tt.args.postHash)
+			if tokens == nil || len(tokens) == 0 {
 				t.Errorf("sortToken() error")
 			}
 			t.Log("after")
-			for _, v := range r.queryToken {
+			for _, v := range tokens {
 				t.Logf("token:%s,count:%d", v.token, v.invertedIndex.DocCount)
 			}
 

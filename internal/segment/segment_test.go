@@ -80,7 +80,7 @@ func TestIndex_token2PostingsLists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := e.Token2PostingsLists(tt.args.bufInvertHash, tt.args.token, tt.args.position, tt.args.docID); (err != nil) != tt.wantErr {
+			if err := Token2PostingsLists(tt.args.bufInvertHash, tt.args.token, tt.args.position, tt.args.docID); (err != nil) != tt.wantErr {
 				t.Errorf("Index.token2PostingsLists() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			count := tt.args.bufInvertHash[tt.args.token].PositionCount
