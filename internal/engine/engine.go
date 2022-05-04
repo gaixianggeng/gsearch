@@ -81,6 +81,7 @@ func (e *Engine) Flush(isEnd ...bool) error {
 		return err
 	}
 
+	e.UpdateCount(e.meta.IndexCount)
 	e.Seg[e.CurrSegID].Close()
 	delete(e.Seg, e.CurrSegID)
 

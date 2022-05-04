@@ -89,6 +89,11 @@ func (m *MergeScheduler) calculateSegs() (*MergeMessage, bool) {
 	segs := m.Meta.SegMeta.SegInfo
 	log.Debugf("segs: %v", segs)
 
+	_, ok0 := segs[0]
+	_, ok2 := segs[1]
+	if !ok0 || !ok2 {
+		return nil, false
+	}
 	// 判断是否需要合并
 
 	segList := make([]*segment.SegInfo, 0)
