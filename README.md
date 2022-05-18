@@ -116,6 +116,14 @@
 
 笔记
 
+* index
+  * index下存储
+  * 分段
+  * segemnt merge
+* 查询
+  * recal
+  * 相关性
+
 * [snowflake](https://github.com/bwmarrin/snowflake)
 
 * 只写入，不修改，每次根据 size 设置的阈值写入数据。
