@@ -28,9 +28,9 @@ type Meta struct {
 
 // ParseMeta 解析数据
 func ParseMeta(c *conf.Config) (*Meta, error) {
-	// 文件不存在表示没有相关数据 第一次创建
 	metaFile = c.Storage.Path + metaFile
-	if !utils.ExistFile(metaFile) {
+	// 文件不存在表示没有相关数据 第一次创建
+	if !utils.IsFileExist(metaFile) {
 		log.Debugf("segMetaFile:%s not exist", metaFile)
 		_, err := os.Create(metaFile)
 		if err != nil {

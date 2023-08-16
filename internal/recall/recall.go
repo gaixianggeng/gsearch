@@ -92,7 +92,7 @@ func (r *Recall) searchDoc() (Recalls, error) {
 		}
 		// postings, _, err := r.Engine.Seg[r.Engine.CurrSegID].FetchPostings(t.token)
 
-		postings, count, err := r.fetchPostingsBySegs(token)
+		postings, count, err := r.fetchPostingsBySegments(token)
 		if err != nil {
 			return nil, fmt.Errorf("fetchPostings err: %v", err)
 		}
@@ -175,7 +175,7 @@ func (r *Recall) searchDoc() (Recalls, error) {
 }
 
 // 获取token所有seg的倒排表数据
-func (r *Recall) fetchPostingsBySegs(token string) (*segment.PostingsList, uint64, error) {
+func (r *Recall) fetchPostingsBySegments(token string) (*segment.PostingsList, uint64, error) {
 	postings := &segment.PostingsList{}
 	postings = nil
 	docCount := uint64(0)

@@ -57,7 +57,7 @@ func (m *MergeScheduler) Merge() {
 	}
 }
 
-//Close 关闭调度器
+// Close 关闭调度器
 func (m *MergeScheduler) Close() {
 	// 保证所有merge执行完毕
 	m.Wait()
@@ -291,7 +291,7 @@ func (m *MergeScheduler) deleteSegFile(segID segment.SegID) error {
 
 // 判断seg是否存在，防止已经merge
 func (m *MergeScheduler) segExists(termName, invertedName, forwardName string) bool {
-	return utils.ExistFile(termName) && utils.ExistFile(invertedName) && utils.ExistFile(forwardName)
+	return utils.IsFileExist(termName) && utils.IsFileExist(invertedName) && utils.IsFileExist(forwardName)
 }
 
 // NewScheduleer 创建调度器

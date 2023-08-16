@@ -21,6 +21,7 @@ func Run(meta *engine.Meta, conf *conf.Config) {
 	}
 	defer index.Close()
 
+	// TODO: 这样调用不合适
 	addDoc(index)
 	log.Infof("index run end")
 }

@@ -9,19 +9,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Recall 召回
-type Recall struct {
-	*recall.Recall
+// RecallController 召回
+type RecallController struct {
+	engine *recall.Recall
 }
 
-// Get 搜索入口
-func (r *Recall) Get(c *gin.Context) {
+// Search 搜索入口
+func (r *RecallController) Search(c *gin.Context) {
 	query := c.Query("query") // shortcut for c.Request.URL.Query().Get("lastname")
 	if query == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "query is empty"})
 		return
 	}
-	res, err := r.Search(query)
+	res, err := r.engine.Search(query)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code": http.StatusInternalServerError,
@@ -38,8 +38,8 @@ func (r *Recall) Get(c *gin.Context) {
 
 }
 
-// NewRecallServ 创建召回服务
-func NewRecallServ(meta *engine.Meta, c *conf.Config) *Recall {
+// NewRecall 创建召回服务
+func NewRecall(meta *engine.Meta, c *conf.Config) *RecallController {
 	r := recall.NewRecall(meta, c)
-	return &Recall{r}
+	return &RecallController{r}
 }

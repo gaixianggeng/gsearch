@@ -8,11 +8,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// StartServ 启动服务
-func StartServ(meta *engine.Meta, conf *conf.Config) {
+// Start 启动服务
+func Start(meta *engine.Meta, conf *conf.Config) {
 	log.Info("start")
 
-	recall := NewRecallServ(meta, conf)
+	recall := NewRecall(meta, conf)
 
 	r := gin.Default()
 	r.GET("/ping", func(c *gin.Context) {
@@ -21,7 +21,7 @@ func StartServ(meta *engine.Meta, conf *conf.Config) {
 		})
 	})
 
-	r.GET("/search", recall.Get)
+	r.GET("/search", recall.Search)
 
 	r.Run(":5168")
 }

@@ -16,8 +16,14 @@ var (
 	action int64
 )
 
+const (
+	START_SERVER = 1
+	START_INDEX  = 2
+)
+
 func run() {
-	confPath := "../conf/conf.toml"
+	// TODO: 命令行启动参数
+	confPath := "./conf/conf.toml"
 	c, err := conf.ReadConf(confPath)
 	if err != nil {
 		log.Fatal(err)
@@ -53,10 +59,10 @@ func run() {
 }
 
 func start(c *conf.Config, meta *engine.Meta) {
-	if action == 1 {
+	if action == START_SERVER {
 		log.Debugf("start server...")
-		api.StartServ(meta, c)
-	} else if action == 2 {
+		api.Start(meta, c)
+	} else if action == START_INDEX {
 		log.Debugf("start")
 		index.Run(meta, c)
 		log.Debug("end")

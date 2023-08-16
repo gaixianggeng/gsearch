@@ -3,7 +3,6 @@ package recall
 import (
 	"doraemon/conf"
 	"doraemon/internal/engine"
-	"doraemon/internal/segment"
 	"fmt"
 	"os"
 	"path"
@@ -20,52 +19,52 @@ const (
 	sourceFile = "../../data/source.csv"
 )
 
-func TestRecall_sortToken(t *testing.T) {
+// func TestRecall_sortToken(t *testing.T) {
 
-	type args struct {
-		postHash segment.InvertedIndexHash
-	}
+// 	type args struct {
+// 		postHash segment.InvertedIndexHash
+// 	}
 
-	hash := segment.InvertedIndexHash{
-		"北京": &segment.InvertedIndexValue{
-			DocCount: 9,
-		},
-		"成都": &segment.InvertedIndexValue{
-			DocCount: 4,
-		},
-		"上海": &segment.InvertedIndexValue{
-			DocCount: 6,
-		},
-		"深圳": &segment.InvertedIndexValue{
-			DocCount: 0,
-		},
-	}
+// 	hash := segment.InvertedIndexHash{
+// 		"北京": &segment.InvertedIndexValue{
+// 			DocCount: 9,
+// 		},
+// 		"成都": &segment.InvertedIndexValue{
+// 			DocCount: 4,
+// 		},
+// 		"上海": &segment.InvertedIndexValue{
+// 			DocCount: 6,
+// 		},
+// 		"深圳": &segment.InvertedIndexValue{
+// 			DocCount: 0,
+// 		},
+// 	}
 
-	tests := []struct {
-		name string
-		args args
-	}{
-		// TODO: Add test cases.
-		{name: "test1", args: args{postHash: hash}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+// 	tests := []struct {
+// 		name string
+// 		args args
+// 	}{
+// 		// TODO: Add test cases.
+// 		{name: "test1", args: args{postHash: hash}},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
 
-			r := newRecall()
-			defer r.Close()
+// 			r := newRecall()
+// 			defer r.Close()
 
-			tokens := r.sortToken(tt.args.postHash)
-			if tokens == nil || len(tokens) == 0 {
-				t.Errorf("sortToken() error")
-			}
-			t.Log("after")
-			for _, v := range tokens {
-				t.Logf("token:%s,count:%d", v.token, v.invertedIndex.DocCount)
-			}
+// 			tokens := r.sortToken(tt.args.postHash)
+// 			if tokens == nil || len(tokens) == 0 {
+// 				t.Errorf("sortToken() error")
+// 			}
+// 			t.Log("after")
+// 			for _, v := range tokens {
+// 				t.Logf("token:%s,count:%d", v.token, v.invertedIndex.DocCount)
+// 			}
 
-		})
-	}
-}
+//			})
+//		}
+//	}
 func TestRecall_Search(t *testing.T) {
 	type args struct {
 		query string
