@@ -85,6 +85,7 @@ func TestIndex_token2PostingsLists(t *testing.T) {
 			}
 			count := tt.args.bufInvertHash[tt.args.token].PositionCount
 			docCount := tt.args.bufInvertHash[tt.args.token].DocCount
+			t.Logf("count:%v,docCount:%v", count, docCount)
 			if tt.name == "test1" && (count != 1 || docCount != 1) {
 				t.Errorf("count:%v,docCount:%v", count, docCount)
 			}

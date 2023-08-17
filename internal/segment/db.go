@@ -10,13 +10,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//InvertedIndexValue 倒排索引
+// InvertedIndexValue 倒排索引
 type InvertedIndexValue struct {
-	Token         string
-	PostingsList  *PostingsList
-	DocCount      uint64
-	PositionCount uint64 // 查询使用，写入的时候暂时用不到
-	TermValues    *storage.TermValue
+	Token         string             // 词元
+	PostingsList  *PostingsList      // 文档编号的序列
+	DocCount      uint64             // 词元关联的文档数量
+	PositionCount uint64             // 词元在所有文档中出现的次数 查询使用,用于计算相关性，写入的时候暂时用不到
+	TermValues    *storage.TermValue // 存储的doc_count、offset、size
 }
 
 // InvertedIndexHash 倒排hash

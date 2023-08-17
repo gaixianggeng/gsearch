@@ -17,13 +17,12 @@ type Segment struct {
 	conf *conf.Config
 }
 
-// Token2PostingsLists --
+// Token2PostingsLists token转倒排索引
 func Token2PostingsLists(bufInvertHash InvertedIndexHash, token string,
 	position uint64, docID uint64) error {
-
 	// init
 	bufInvert := new(InvertedIndexValue)
-
+	// 读取内存中的倒排索引
 	if len(bufInvertHash) > 0 {
 		if item, ok := bufInvertHash[token]; ok {
 			bufInvert = item

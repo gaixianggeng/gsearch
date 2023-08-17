@@ -30,9 +30,9 @@ type KvInfo struct {
 
 // TermValue 存储的doc_count、offset、size
 type TermValue struct {
-	DocCount uint64
-	Offset   uint64
-	Size     uint64
+	DocCount uint64 // 文档数量
+	Offset   uint64 // 倒排列表在文件中的偏移量
+	Size     uint64 // term value的大小
 }
 
 // StoragePostings 倒排列表存储到数据库中

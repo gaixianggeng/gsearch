@@ -28,7 +28,7 @@ func Test_ignoredChar(t *testing.T) {
 	}
 }
 
-func TestNgram(t *testing.T) {
+func TestNGram(t *testing.T) {
 	type args struct {
 		content string
 		n       int32
@@ -39,21 +39,40 @@ func TestNgram(t *testing.T) {
 		want    []Tokenization
 		wantErr bool
 	}{
-		// TODO: Add test cases.
-		{"test1", args{"北京北京", 2}, []Tokenization{
-			{("北京"), 0},
-			{("京北"), 1},
-			{("北京"), 2}}, false},
+		{
+			"test1",
+			args{"北京北京", 2},
+			[]Tokenization{
+				{("北京"), 0},
+				{("京北"), 1},
+				{("北京"), 2}},
+			false},
+		{
+			"test2",
+			args{"北京北京", 3},
+			[]Tokenization{
+				{("北京北"), 0},
+				{("京北京"), 1},
+				{("北京"), 2}},
+			true},
+		{
+			"test3",
+			args{"北京北京", 4},
+			[]Tokenization{
+				{("北京北京"), 0},
+				{("北京"), 1}},
+			true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Ngram(tt.args.content, tt.args.n)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Ngram() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := NGram(tt.args.content, tt.args.n)
+			t.Logf("got:%v", got)
+			if err != nil {
+				t.Errorf("NGram() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Ngram() = %v, want %v", got, tt.want)
+			if reflect.DeepEqual(got, tt.want) == tt.wantErr {
+				t.Errorf("NGram() = %v, want %v", got, tt.want)
 			}
 		})
 	}

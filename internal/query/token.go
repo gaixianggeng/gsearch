@@ -1,7 +1,7 @@
 package query
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -13,28 +13,24 @@ type Tokenization struct {
 	Position uint64
 }
 
-// Ngram 分词
-func Ngram(content string, n int32) ([]Tokenization, error) {
+// NGram 分词
+func NGram(content string, n int32) ([]Tokenization, error) {
 	if n < 1 {
-		return nil, fmt.Errorf("Ngram n must >= 1")
+		return nil, errors.New("ngram n must >= 1")
 	}
 	content = ignoredChar(content)
 	var token []Tokenization
 	if n >= int32(len([]rune(content))) {
-		token = append(token, Tokenization{content, 0})
-		return token, nil
+		return []Tokenization{{content, 0}}, nil
 	}
 
 	i := int32(0)
 	num := len([]rune(content))
 	for i = 0; i < int32(num); i++ {
-		t := []rune{}
 		if i+n > int32(num) {
-			// t = []rune(content)[i:]
 			break
-		} else {
-			t = []rune(content)[i : i+n]
 		}
+		t := []rune(content)[i : i+n]
 		token = append(token, Tokenization{
 			Token:    string(t),
 			Position: uint64(i),
@@ -43,6 +39,7 @@ func Ngram(content string, n int32) ([]Tokenization, error) {
 	return token, nil
 }
 
+// ignoredChar 去除无用字符
 func ignoredChar(str string) string {
 	for _, c := range str {
 		switch c {

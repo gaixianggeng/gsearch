@@ -31,10 +31,9 @@ func (e *Engine) AddDoc(doc *storage.Document) error {
 	return e.Seg[e.CurrSegID].AddForward(doc)
 }
 
-// Text2PostingsLists --
+// Text2PostingsLists 文本转倒排索引
 func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
-
-	tokens, err := query.Ngram(text, e.N)
+	tokens, err := query.NGram(text, e.N)
 	if err != nil {
 		return fmt.Errorf("text2PostingsLists Ngram err: %v", err)
 	}
