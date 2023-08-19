@@ -2,9 +2,9 @@ package segment
 
 import (
 	"bytes"
-	"doraemon/conf"
-	"doraemon/internal/storage"
 	"fmt"
+	"gsearch/conf"
+	"gsearch/internal/storage"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -32,8 +32,9 @@ func Token2PostingsLists(bufInvertHash InvertedIndexHash, token string,
 	pl := new(PostingsList)
 	if bufInvert != nil && bufInvert.PostingsList != nil {
 		pl = bufInvert.PostingsList
-		// 这里的positioinCount和下面bufInvert的positionCount是不一样的
-		// 这里统计的是同一个docid的position的个数
+		// 这里的positionCount和下面bufInvert的positionCount是不一样的
+		// 这里统计的是同一个doc id的position的个数
+		// 因为这个方法的上游就是同一个doc id的position
 		pl.PositionCount++
 	} else {
 		// // 不为空表示写入操作，否则为查询

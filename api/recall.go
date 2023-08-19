@@ -1,9 +1,9 @@
 package api
 
 import (
-	"doraemon/conf"
-	"doraemon/internal/engine"
-	"doraemon/internal/recall"
+	"gsearch/conf"
+	"gsearch/internal/engine"
+	"gsearch/internal/recall"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

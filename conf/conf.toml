@@ -1,14 +1,14 @@
-project = "doraemon"
+project = "gsearch"
 version = "0.0.1"
 
 [owner]
 name = "gai"
 
 [source]
-files = ["../source/source.csv"]
+files = ["./source/source.csv"]
 
 [storage]
-path = "../data/"
+path = "./data/"
 
 [merge]
 channel_size = 10

@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"doraemon/pkg/utils"
+	"gsearch/pkg/utils"
 	"testing"
 
 	log "github.com/sirupsen/logrus"

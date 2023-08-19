@@ -1,11 +1,11 @@
 package engine
 
 import (
-	"doraemon/conf"
-	"doraemon/internal/segment"
-	"doraemon/internal/storage"
-	"doraemon/pkg/utils"
 	"fmt"
+	"gsearch/conf"
+	"gsearch/internal/segment"
+	"gsearch/internal/storage"
+	"gsearch/pkg/utils/file"
 	"os"
 	"strings"
 	"sync"
@@ -291,7 +291,7 @@ func (m *MergeScheduler) deleteSegFile(segID segment.SegID) error {
 
 // 判断seg是否存在，防止已经merge
 func (m *MergeScheduler) segExists(termName, invertedName, forwardName string) bool {
-	return utils.IsFileExist(termName) && utils.IsFileExist(invertedName) && utils.IsFileExist(forwardName)
+	return file.IsExist(termName) && file.IsExist(invertedName) && file.IsExist(forwardName)
 }
 
 // NewScheduleer 创建调度器

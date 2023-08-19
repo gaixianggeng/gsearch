@@ -1,8 +1,8 @@
 package api
 
 import (
-	"doraemon/conf"
-	"doraemon/internal/engine"
+	"gsearch/conf"
+	"gsearch/internal/engine"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"

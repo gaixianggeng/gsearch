@@ -1,12 +1,13 @@
 package main
 
 import (
-	"doraemon/api"
-	"doraemon/conf"
-	"doraemon/internal/engine"
-	"doraemon/internal/index"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"gsearch/api"
+	"gsearch/conf"
+	"gsearch/internal/engine"
+	"gsearch/internal/index"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -21,14 +22,28 @@ const (
 	START_INDEX  = 2
 )
 
+const (
+	startCommand = `
+Usage: gsearch [options]
+Options:
+	--flag 1:online service 2:index
+`
+)
+
 func run() {
+	if action != START_SERVER && action != START_INDEX {
+		fmt.Printf("%s\n", startCommand)
+		return
+	}
+	log.Info("start...")
 	// TODO: 命令行启动参数
 	confPath := "./conf/conf.toml"
 	c, err := conf.ReadConf(confPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	t, _ := json.Marshal(c)
+	fmt.Printf("conf:%s\n", t)
 	meta, err := engine.ParseMeta(c)
 	if err != nil {
 		panic(err)
@@ -71,7 +86,7 @@ func start(c *conf.Config, meta *engine.Meta) {
 
 // 获取flag参数
 func flagInit() {
-	flag.Int64Var(&action, "flag", 1, "start flag 1:serv 2:index")
+	flag.Int64Var(&action, "flag", 0, "start flag:\n[1:online service]\n [2:index]")
 	flag.Parse()
 }
 

@@ -1,11 +1,11 @@
 package engine
 
 import (
-	"doraemon/conf"
-	"doraemon/internal/query"
-	"doraemon/internal/segment"
-	"doraemon/internal/storage"
 	"fmt"
+	"gsearch/conf"
+	"gsearch/internal/query"
+	"gsearch/internal/segment"
+	"gsearch/internal/storage"
 
 	log "github.com/sirupsen/logrus"
 )

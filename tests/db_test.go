@@ -2,9 +2,9 @@ package tests
 
 import (
 	"bytes"
-	"doraemon/internal/storage"
 	"encoding/binary"
 	"fmt"
+	"gsearch/internal/storage"
 	"os"
 	"sort"
 	"testing"

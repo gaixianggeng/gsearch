@@ -1,11 +1,11 @@
 package engine
 
 import (
-	"doraemon/conf"
-	"doraemon/internal/segment"
-	"doraemon/pkg/utils"
 	"encoding/json"
 	"fmt"
+	"gsearch/conf"
+	"gsearch/internal/segment"
+	"gsearch/pkg/utils/file"
 	"os"
 	"sync"
 	"time"
@@ -29,13 +29,15 @@ type Meta struct {
 // ParseMeta 解析数据
 func ParseMeta(c *conf.Config) (*Meta, error) {
 	metaFile = c.Storage.Path + metaFile
+	log.Infof("metaFile:%s", metaFile)
 	// 文件不存在表示没有相关数据 第一次创建
-	if !utils.IsFileExist(metaFile) {
+	if !file.IsExist(metaFile) {
 		log.Debugf("segMetaFile:%s not exist", metaFile)
-		_, err := os.Create(metaFile)
+		f, err := os.Create(metaFile)
 		if err != nil {
 			return nil, fmt.Errorf("create segmentsGenFile err: %v", err)
 		}
+		f.Close()
 		m := &Meta{
 			Version: c.Version,
 			path:    metaFile,

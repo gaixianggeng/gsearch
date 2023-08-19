@@ -1,10 +1,10 @@
 package index
 
 import (
-	"doraemon/conf"
-	"doraemon/internal/engine"
-	"doraemon/internal/storage"
 	"fmt"
+	"gsearch/conf"
+	"gsearch/internal/engine"
+	"gsearch/internal/storage"
 	"strconv"
 	"strings"
 

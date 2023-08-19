@@ -1,15 +1,11 @@
 package main
 
 import (
-	"doraemon/pkg/utils"
-
-	log "github.com/sirupsen/logrus"
+	"gsearch/pkg/utils"
 )
 
 func main() {
-	log.Info("start")
 	run()
-	log.Info("end")
 }
 
 func init() {

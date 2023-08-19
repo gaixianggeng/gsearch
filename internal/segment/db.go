@@ -3,9 +3,9 @@ package segment
 // 正排和倒排相关操作
 
 import (
-	"doraemon/conf"
-	"doraemon/internal/storage"
 	"fmt"
+	"gsearch/conf"
+	"gsearch/internal/storage"
 
 	log "github.com/sirupsen/logrus"
 )

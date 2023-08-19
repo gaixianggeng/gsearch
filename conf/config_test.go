@@ -13,7 +13,7 @@ func TestReadConf(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{"test1", &Config{
-			Project: "doraemon",
+			Project: "gsearch",
 			Version: "0.0.1",
 			Storage: struct {
 				Path string "toml:\"path\""

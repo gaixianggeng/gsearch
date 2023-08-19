@@ -1,9 +1,9 @@
 package engine
 
 import (
-	"doraemon/conf"
-	"doraemon/pkg/utils"
 	"encoding/json"
+	"gsearch/conf"
+	"gsearch/pkg/utils"
 	"testing"
 	"time"
 )

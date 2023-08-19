@@ -2,9 +2,9 @@ package storage
 
 import (
 	"bytes"
-	"doraemon/pkg/utils"
 	"encoding/binary"
 	"fmt"
+	"gsearch/pkg/utils"
 	"os"
 
 	"github.com/boltdb/bolt"

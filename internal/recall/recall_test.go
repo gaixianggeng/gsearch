@@ -1,9 +1,9 @@
 package recall
 
 import (
-	"doraemon/conf"
-	"doraemon/internal/engine"
 	"fmt"
+	"gsearch/conf"
+	"gsearch/internal/engine"
 	"os"
 	"path"
 	"runtime"

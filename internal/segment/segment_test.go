@@ -1,7 +1,8 @@
 package segment
 
 import (
-	"doraemon/conf"
+	"encoding/json"
+	"gsearch/conf"
 	"log"
 	"testing"
 )
@@ -80,11 +81,14 @@ func TestIndex_token2PostingsLists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Log(tt.args.docID)
 			if err := Token2PostingsLists(tt.args.bufInvertHash, tt.args.token, tt.args.position, tt.args.docID); (err != nil) != tt.wantErr {
 				t.Errorf("Index.token2PostingsLists() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			count := tt.args.bufInvertHash[tt.args.token].PositionCount
 			docCount := tt.args.bufInvertHash[tt.args.token].DocCount
+			s, _ := json.Marshal(tt.args.bufInvertHash)
+			t.Logf("bufInvertHash:%v", string(s))
 			t.Logf("count:%v,docCount:%v", count, docCount)
 			if tt.name == "test1" && (count != 1 || docCount != 1) {
 				t.Errorf("count:%v,docCount:%v", count, docCount)
@@ -151,6 +155,7 @@ func newEng(mode Mode) *Segment {
 	if err != nil {
 		log.Fatal(err)
 	}
+	c.Storage.Path = "../../data/"
 	eng := NewSegment(0, c)
 	return eng
 

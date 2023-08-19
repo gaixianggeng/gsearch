@@ -2,8 +2,8 @@ package segment
 
 import (
 	"bytes"
-	"doraemon/internal/storage"
 	"fmt"
+	"gsearch/internal/storage"
 	"strconv"
 	"strings"
 	"time"

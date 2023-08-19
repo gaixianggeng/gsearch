@@ -1,4 +1,4 @@
-module doraemon
+module gsearch
 
 go 1.18
 

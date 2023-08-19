@@ -1,10 +1,10 @@
 package recall
 
 import (
-	"doraemon/conf"
-	"doraemon/internal/engine"
-	"doraemon/internal/segment"
 	"fmt"
+	"gsearch/conf"
+	"gsearch/internal/engine"
+	"gsearch/internal/segment"
 	"sort"
 	"strings"
 
