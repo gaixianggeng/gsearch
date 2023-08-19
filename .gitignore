@@ -16,3 +16,4 @@
 # vendor/
 
 data/*
+go.sum
