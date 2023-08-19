@@ -131,3 +131,5 @@
 * 写入直接 os.File 写入，记录 offset 不会涉及到 mmap 的页读取，所以直接根据 write 量记录 offset, 初始化打开文件时，读取文件，设置 offset 即可
 
 * 读取通过 mmap 读取
+
+* 向量找回
