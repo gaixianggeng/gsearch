@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"gsearch/api"
 	"gsearch/conf"
-	"gsearch/internal/engine"
 	"gsearch/internal/index"
+	"gsearch/internal/meta"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -44,7 +44,7 @@ func run() {
 	}
 	t, _ := json.Marshal(c)
 	fmt.Printf("conf:%s\n", t)
-	meta, err := engine.ParseMeta(c)
+	meta, err := meta.ParseProfile(c)
 	if err != nil {
 		panic(err)
 	}
@@ -73,13 +73,13 @@ func run() {
 	}()
 }
 
-func start(c *conf.Config, meta *engine.Meta) {
+func start(c *conf.Config, profile *meta.Profile) {
 	if action == START_SERVER {
 		log.Debugf("start server...")
-		api.Start(meta, c)
+		api.Start(profile, c)
 	} else if action == START_INDEX {
 		log.Debugf("start")
-		index.Run(meta, c)
+		index.Run(profile, c)
 		log.Debug("end")
 	}
 }

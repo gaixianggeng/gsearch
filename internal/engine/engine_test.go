@@ -2,13 +2,14 @@ package engine
 
 import (
 	"gsearch/conf"
+	"gsearch/internal/meta"
 	"gsearch/internal/segment"
 	"testing"
 )
 
 func TestEngine_Text2PostingsLists(t *testing.T) {
 	type fields struct {
-		meta            *Meta
+		meta            *meta.Profile
 		conf            *conf.Config
 		Scheduler       *MergeScheduler
 		BufCount        uint64

@@ -7,12 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Tokenization  分词返回结构
-type Tokenization struct {
-	Token    string
-	Position uint64
-}
-
 // NGram 分词
 func NGram(content string, n int32) ([]Tokenization, error) {
 	if n < 1 {

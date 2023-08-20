@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"gsearch/conf"
+	"gsearch/internal/meta"
 	"gsearch/pkg/utils"
 	"testing"
 	"time"
@@ -17,7 +18,7 @@ func TestMergeScheduler_mayMerge(t *testing.T) {
 	}
 	c.Storage.Path = "../../data/"
 
-	meta, err := ParseMeta(c)
+	meta, err := meta.ParseProfile(c)
 	if err != nil {
 		t.Error(err)
 		return
@@ -29,7 +30,7 @@ func TestMergeScheduler_mayMerge(t *testing.T) {
 	cont, _ := json.Marshal(meta.SegMeta.SegInfo)
 	t.Logf("seg info:%s:", cont)
 
-	m := NewScheduleer(meta, c)
+	m := NewScheduler(meta, c)
 
 	go m.Merge()
 

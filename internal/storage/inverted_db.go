@@ -22,12 +22,6 @@ type InvertedDB struct {
 	offset uint64
 }
 
-// KvInfo term信息
-type KvInfo struct {
-	Key   []byte
-	Value []byte
-}
-
 // TermValue 存储的doc_count、offset、size
 type TermValue struct {
 	DocCount uint64 // 文档数量

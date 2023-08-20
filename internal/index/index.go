@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gsearch/conf"
 	"gsearch/internal/engine"
+	"gsearch/internal/meta"
 	"gsearch/internal/segment"
 	"gsearch/internal/storage"
 )
@@ -11,7 +12,7 @@ import (
 // Index --
 type Index struct {
 	*engine.Engine
-	*engine.Meta
+	*meta.Profile
 	Conf *conf.Config
 }
 
@@ -37,11 +38,11 @@ func (in *Index) Close() {
 }
 
 // NewIndexEngine init
-func NewIndexEngine(meta *engine.Meta, c *conf.Config) (*Index, error) {
+func NewIndexEngine(meta *meta.Profile, c *conf.Config) (*Index, error) {
 	e := engine.NewEngine(meta, c, segment.IndexMode)
 	return &Index{
-		Engine: e,
-		Conf:   c,
-		Meta:   meta,
+		Engine:  e,
+		Conf:    c,
+		Profile: meta,
 	}, nil
 }

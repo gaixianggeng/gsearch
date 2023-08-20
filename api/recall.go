@@ -2,7 +2,7 @@ package api
 
 import (
 	"gsearch/conf"
-	"gsearch/internal/engine"
+	"gsearch/internal/meta"
 	"gsearch/internal/recall"
 	"net/http"
 
@@ -39,7 +39,7 @@ func (r *RecallController) Search(c *gin.Context) {
 }
 
 // NewRecall 创建召回服务
-func NewRecall(meta *engine.Meta, c *conf.Config) *RecallController {
-	r := recall.NewRecall(meta, c)
+func NewRecall(profile *meta.Profile, c *conf.Config) *RecallController {
+	r := recall.NewRecall(profile, c)
 	return &RecallController{r}
 }

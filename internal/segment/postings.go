@@ -9,14 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// PostingsList 倒排列表
-type PostingsList struct {
-	DocID         uint64
-	Positions     []uint64
-	PositionCount uint64
-	Next          *PostingsList
-}
-
 // MergePostings merge two postings list
 // https://leetcode-cn.com/problems/he-bing-liang-ge-pai-xu-de-lian-biao-lcof/
 // docid 排序

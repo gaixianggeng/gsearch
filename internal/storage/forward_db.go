@@ -9,10 +9,6 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-const forwardBucket = "forward"
-
-const ForwardCountKey = "forwardCount"
-
 // ForwardDB 存储器
 type ForwardDB struct {
 	db *bolt.DB

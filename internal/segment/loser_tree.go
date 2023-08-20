@@ -13,19 +13,6 @@ import (
 
 // https://www.cnblogs.com/qianye/archive/2012/11/25/2787923.html
 
-// LoserTree --
-type LoserTree struct {
-	tree     []int // 索引表示顺序，0表示最小值，value表示对应的leaves的index
-	leaves   []*TermNode
-	leavesCh []chan storage.KvInfo
-}
-
-// TermNode --
-type TermNode struct {
-	*storage.KvInfo
-	Seg *Segment // 主要用来调用intervted的相关方法
-}
-
 // NewSegLoserTree 败者树
 func NewSegLoserTree(leaves []*TermNode, leavesCh []chan storage.KvInfo) *LoserTree {
 	k := len(leaves)

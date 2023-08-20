@@ -3,7 +3,7 @@ package index
 import (
 	"fmt"
 	"gsearch/conf"
-	"gsearch/internal/engine"
+	"gsearch/internal/meta"
 	"gsearch/internal/storage"
 	"strconv"
 	"strings"
@@ -12,7 +12,7 @@ import (
 )
 
 // Run 索引写入入口
-func Run(meta *engine.Meta, conf *conf.Config) {
+func Run(meta *meta.Profile, conf *conf.Config) {
 
 	log.Infof("index run...")
 	index, err := NewIndexEngine(meta, conf)

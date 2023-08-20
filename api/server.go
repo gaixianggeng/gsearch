@@ -2,14 +2,14 @@ package api
 
 import (
 	"gsearch/conf"
-	"gsearch/internal/engine"
+	"gsearch/internal/meta"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
 // Start 启动服务
-func Start(meta *engine.Meta, conf *conf.Config) {
+func Start(meta *meta.Profile, conf *conf.Config) {
 	log.Info("start")
 
 	recall := NewRecall(meta, conf)

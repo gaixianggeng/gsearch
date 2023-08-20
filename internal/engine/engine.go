@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"gsearch/conf"
+	"gsearch/internal/meta"
 	"gsearch/internal/query"
 	"gsearch/internal/segment"
 	"gsearch/internal/storage"
@@ -12,7 +13,7 @@ import (
 
 // Engine 写入引擎
 type Engine struct {
-	meta      *Meta // 元数据
+	meta      *meta.Profile // 元数据
 	conf      *conf.Config
 	Scheduler *MergeScheduler
 
@@ -151,9 +152,9 @@ func (e *Engine) Close() {
 
 // NewEngine --
 // 每次初始化的时候调整meta数据
-func NewEngine(meta *Meta, conf *conf.Config, engineMode segment.Mode) *Engine {
+func NewEngine(meta *meta.Profile, conf *conf.Config, engineMode segment.Mode) *Engine {
 
-	sche := NewScheduleer(meta, conf)
+	sche := NewScheduler(meta, conf)
 	segID, seg := segment.NewSegments(meta.SegMeta, conf, engineMode)
 	return &Engine{
 		CurrSegID:       segID,

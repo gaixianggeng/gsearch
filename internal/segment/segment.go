@@ -13,7 +13,6 @@ import (
 type Segment struct {
 	*storage.ForwardDB
 	*storage.InvertedDB
-
 	conf *conf.Config
 }
 
@@ -119,13 +118,11 @@ func (e *Segment) storagePostings(p *InvertedIndexValue) error {
 	if p == nil {
 		return fmt.Errorf("updatePostings p is nil")
 	}
-
 	// 编码
 	buf, err := EncodePostings(p.PostingsList, p.DocCount)
 	if err != nil {
 		return fmt.Errorf("updatePostings encodePostings err: %v", err)
 	}
-
 	// 开始写入数据库
 	return e.InvertedDB.StoragePostings(p.Token, buf.Bytes(), p.DocCount)
 }
@@ -136,24 +133,23 @@ func (e *Segment) Close() {
 	e.ForwardDB.Close()
 }
 
-// NewSegments 创建新的segments 更新nextseg
+// NewSegments 创建新的segments 更新next seg
 func NewSegments(meta *SegMeta, conf *conf.Config, mode Mode) (SegID, map[SegID]*Segment) {
-
-	segs := make(map[SegID]*Segment, 0)
+	segM := make(map[SegID]*Segment, 0)
 	if mode == MergeMode || mode == IndexMode {
 		segID := meta.NextSeg
 		meta.NewSegmentItem()
 		seg := NewSegment(segID, conf)
-		segs[segID] = seg
-		return segID, segs
+		segM[segID] = seg
+		return segID, segM
 	}
 	log.Debugf("meta:%v", meta)
 	for segID := range meta.SegInfo {
 		seg := NewSegment(segID, conf)
 		log.Infof("dbInit segID:%v,next:%v", segID, meta.NextSeg)
-		segs[segID] = seg
+		segM[segID] = seg
 	}
-	return -1, segs
+	return -1, segM
 
 }
 

@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"gsearch/conf"
+	"gsearch/internal/meta"
 	"gsearch/internal/segment"
 	"gsearch/internal/storage"
 	"gsearch/pkg/utils/file"
@@ -17,7 +18,7 @@ import (
 // MergeScheduler 合并调度器
 type MergeScheduler struct {
 	Message chan *MergeMessage
-	Meta    *Meta
+	Meta    *meta.Profile
 	conf    *conf.Config
 
 	sync.WaitGroup
@@ -294,8 +295,8 @@ func (m *MergeScheduler) segExists(termName, invertedName, forwardName string) b
 	return file.IsExist(termName) && file.IsExist(invertedName) && file.IsExist(forwardName)
 }
 
-// NewScheduleer 创建调度器
-func NewScheduleer(meta *Meta, conf *conf.Config) *MergeScheduler {
+// NewScheduler 创建调度器
+func NewScheduler(meta *meta.Profile, conf *conf.Config) *MergeScheduler {
 	ch := make(chan *MergeMessage, conf.Merge.ChannelSize)
 
 	// conf.Storage.Path = "../../data/"

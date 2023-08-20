@@ -3,7 +3,7 @@ package recall
 import (
 	"fmt"
 	"gsearch/conf"
-	"gsearch/internal/engine"
+	"gsearch/internal/meta"
 	"os"
 	"path"
 	"runtime"
@@ -118,7 +118,7 @@ func newRecall() *Recall {
 	}
 	c.Storage.Path = "../../data/"
 
-	meta, err := engine.ParseMeta(c)
+	meta, err := meta.ParseProfile(c)
 	if err != nil {
 		log.Fatal(err)
 	}
