@@ -53,7 +53,7 @@ func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
 		// 合并命中相同的token的不同doc
 		segment.MergeInvertedIndex(e.PostingsHashBuf, bufInvertedHash)
 	} else {
-		// 已经初始化过了
+		// 已经初始化过了, 直接赋值
 		e.PostingsHashBuf = bufInvertedHash
 	}
 

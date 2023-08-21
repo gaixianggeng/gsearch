@@ -158,5 +158,4 @@ func newEng(mode Mode) *Segment {
 	c.Storage.Path = "../../data/"
 	eng := NewSegment(0, c)
 	return eng
-
 }
