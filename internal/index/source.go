@@ -1,10 +1,9 @@
 package index
 
 import (
+	"gsearch/pkg/utils/log"
 	"os"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func readFiles(fileName []string) []string {

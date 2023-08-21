@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"gsearch/conf"
 	"gsearch/internal/storage"
-
-	log "github.com/sirupsen/logrus"
+	"gsearch/pkg/utils/log"
 )
 
 // CreateNewInvertedIndex 创建倒排索引

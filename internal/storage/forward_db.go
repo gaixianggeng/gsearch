@@ -2,9 +2,8 @@ package storage
 
 import (
 	"encoding/json"
+	"log"
 	"strconv"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/boltdb/bolt"
 )

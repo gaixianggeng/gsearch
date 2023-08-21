@@ -1,15 +1,9 @@
 package meta
 
 import (
-	"fmt"
 	"gsearch/conf"
-	"os"
-	"path"
 	"reflect"
-	"runtime"
 	"testing"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func TestParseHeader(t *testing.T) {
@@ -42,17 +36,4 @@ func TestParseHeader(t *testing.T) {
 			}
 		})
 	}
-}
-func init() {
-	log.SetLevel(log.DebugLevel)
-	log.SetOutput(os.Stdout)
-	log.SetReportCaller(true)
-	log.SetFormatter(&log.TextFormatter{
-		DisableColors: false,
-		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
-			//处理文件名
-			fileName := path.Base(frame.File)
-			return frame.Function, fmt.Sprintf("%v:%d", fileName, frame.Line)
-		},
-	})
 }

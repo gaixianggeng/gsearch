@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"gsearch/internal/storage"
+	"gsearch/pkg/utils/log"
 	"strconv"
 	"strings"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // https://www.cnblogs.com/qianye/archive/2012/11/25/2787923.html

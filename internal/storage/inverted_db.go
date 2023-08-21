@@ -5,11 +5,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gsearch/pkg/utils"
+	"gsearch/pkg/utils/log"
 	"os"
 
 	"github.com/boltdb/bolt"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const termBucket = "term"

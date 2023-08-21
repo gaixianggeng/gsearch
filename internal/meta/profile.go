@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"gsearch/internal/segment"
+	"gsearch/pkg/utils/log"
 	"os"
 	"sync"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Profile 元数据

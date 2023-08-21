@@ -2,10 +2,9 @@ package segment
 
 import (
 	"encoding/binary"
+	"gsearch/pkg/utils/log"
 	"reflect"
 	"testing"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func TestEncodePostings(t *testing.T) {

@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"gsearch/conf"
 	"gsearch/internal/storage"
-
-	log "github.com/sirupsen/logrus"
+	"gsearch/pkg/utils/log"
 )
 
 // Segment 段信息 封装term、倒排和正排库

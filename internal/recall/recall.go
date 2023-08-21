@@ -6,10 +6,9 @@ import (
 	"gsearch/internal/engine"
 	"gsearch/internal/meta"
 	"gsearch/internal/segment"
+	"gsearch/pkg/utils/log"
 	"sort"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Recall 查询召回

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"gsearch/conf"
 	"gsearch/internal/meta"
-	"gsearch/pkg/utils"
 	"testing"
 	"time"
 )
@@ -50,8 +49,4 @@ func TestMergeScheduler_mayMerge(t *testing.T) {
 		})
 	}
 	time.Sleep(30e9)
-}
-
-func init() {
-	utils.LogInit()
 }

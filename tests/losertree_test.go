@@ -1,10 +1,8 @@
 package tests
 
 import (
-	"gsearch/pkg/utils"
+	"gsearch/pkg/utils/log"
 	"testing"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // 作者：ppd-2
@@ -168,8 +166,4 @@ func crossListNode(list *ListNode) {
 		list = list.Next
 	}
 
-}
-
-func init() {
-	utils.LogInit()
 }

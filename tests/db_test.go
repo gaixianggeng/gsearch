@@ -5,11 +5,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gsearch/internal/storage"
+	"gsearch/pkg/utils/log"
 	"os"
 	"sort"
 	"testing"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/boltdb/bolt"
 )

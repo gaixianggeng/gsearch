@@ -5,7 +5,7 @@ import (
 	"gsearch/internal/meta"
 
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 // Start 启动服务

@@ -7,8 +7,7 @@ import (
 	"gsearch/internal/query"
 	"gsearch/internal/segment"
 	"gsearch/internal/storage"
-
-	log "github.com/sirupsen/logrus"
+	"gsearch/pkg/utils/log"
 )
 
 // Engine 写入引擎
@@ -60,6 +59,7 @@ func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
 	e.BufCount++
 
 	// 达到阈值
+	log.Infof("bufCount:%d, bufSize:%d", e.BufCount, e.BufSize)
 	if len(e.PostingsHashBuf) > 0 && (e.BufCount >= e.BufSize) {
 		log.Infof("text2PostingsLists need flush")
 		e.Flush()

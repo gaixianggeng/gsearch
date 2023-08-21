@@ -6,9 +6,8 @@ import (
 	"gsearch/conf"
 	"gsearch/internal/segment"
 	"gsearch/pkg/utils/file"
+	"gsearch/pkg/utils/log"
 	"os"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // ParseProfile 解析数据

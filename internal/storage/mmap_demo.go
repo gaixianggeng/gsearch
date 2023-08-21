@@ -2,10 +2,9 @@ package storage
 
 import (
 	"fmt"
+	"gsearch/pkg/utils/log"
 	"os"
 	"syscall"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const maxMapSize = 0x1000000000 // 64GB

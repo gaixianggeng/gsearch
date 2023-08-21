@@ -5,10 +5,9 @@ import (
 	"gsearch/conf"
 	"gsearch/internal/meta"
 	"gsearch/internal/storage"
+	"gsearch/pkg/utils/log"
 	"strconv"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Run 索引写入入口

@@ -2,9 +2,8 @@ package query
 
 import (
 	"errors"
+	"gsearch/pkg/utils/log"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // NGram 分词

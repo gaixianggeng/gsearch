@@ -5,8 +5,7 @@ import (
 	"encoding/binary"
 
 	"gsearch/pkg/utils"
-
-	log "github.com/sirupsen/logrus"
+	"gsearch/pkg/utils/log"
 )
 
 // MergePostings merge two postings list

@@ -8,9 +8,8 @@ import (
 	"gsearch/conf"
 	"gsearch/internal/index"
 	"gsearch/internal/meta"
+	"gsearch/pkg/utils/log"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var (

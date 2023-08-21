@@ -7,12 +7,11 @@ import (
 	"gsearch/internal/segment"
 	"gsearch/internal/storage"
 	"gsearch/pkg/utils/file"
+	"gsearch/pkg/utils/log"
 	"os"
 	"strings"
 	"sync"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // MergeScheduler 合并调度器
