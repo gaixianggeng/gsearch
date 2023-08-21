@@ -4,6 +4,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -15,8 +16,6 @@ var logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 func init() {
 	// 设置时间格式 2006-01-02 15:04:05.000
 	zerolog.TimeFieldFormat = "2006-01-02 15:04:05.000"
-	// show file name and line number
-	logger = logger.With().Caller().Logger()
 	// set level
 	SetLevel("debug")
 	// output to stdout as line
@@ -43,33 +42,34 @@ func SetLevel(level string) {
 	}
 }
 func Debug(args ...interface{}) {
-	logger.Debug().Msg(joinWithSpace(args...))
+	e := addCaller(logger.Debug())
+	e.Msg(joinWithSpace(args...))
 }
 
 func Debugf(format string, args ...interface{}) {
-	logger.Debug().Msgf(format, args...)
+	addCaller(logger.Debug()).Msgf(format, args...)
 }
 
 func Info(args ...interface{}) {
-	logger.Info().Msg(joinWithSpace(args...))
+	addCaller(logger.Info()).Msg(joinWithSpace(args...))
 }
 
 func Infof(format string, args ...interface{}) {
-	logger.Info().Msgf(format, args...)
+	addCaller(logger.Info()).Msgf(format, args...)
 }
 
 func Warn(args ...interface{}) {
-	logger.Warn().Msg(joinWithSpace(args...))
+	addCaller(logger.Warn()).Msg(joinWithSpace(args...))
 }
 
 func Warnf(format string, args ...interface{}) {
-	logger.Warn().Msgf(format, args...)
+	addCaller(logger.Warn()).Msgf(format, args...)
 }
 func Error(args ...interface{}) {
-	logger.Error().Msg(joinWithSpace(args...))
+	addCaller(logger.Error()).Msg(joinWithSpace(args...))
 }
 func Errorf(format string, args ...interface{}) {
-	logger.Error().Msgf(format, args...)
+	addCaller(logger.Error()).Msgf(format, args...)
 }
 
 func Fatal(args ...interface{}) {
@@ -78,7 +78,6 @@ func Fatal(args ...interface{}) {
 func Fatalf(format string, args ...interface{}) {
 	logger.Fatal().Msgf(format, args...)
 }
-
 func Panic(args ...interface{}) {
 	logger.Panic().Msg(joinWithSpace(args...))
 }
@@ -101,4 +100,16 @@ func joinWithSpace(args ...any) string {
 		fmt.Fprint(&builder, arg)
 	}
 	return builder.String()
+}
+
+func addCaller(e *zerolog.Event) *zerolog.Event {
+	_, file, line, ok := runtime.Caller(2) // Adjust the depth as needed
+	files := strings.Split(file, "/")
+	file = files[len(files)-1]
+	if ok {
+		e.Fields(map[string]interface{}{
+			"caller": fmt.Sprintf("[%s:%d]", file, line),
+		})
+	}
+	return e
 }

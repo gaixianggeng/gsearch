@@ -23,6 +23,10 @@ func Get(db *bolt.DB, bucket string, key []byte) ([]byte, error) {
 	var v []byte
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
+		if b == nil {
+			// 单独测试 Text2PostingsLists 时会出现这个错误，因为没有添加正排数据
+			return fmt.Errorf("bucket:%s not exist", bucket)
+		}
 		v = b.Get(key)
 		if v == nil {
 			return fmt.Errorf("key not found")

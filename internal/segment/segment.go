@@ -101,7 +101,7 @@ func (e *Segment) Flush(PostingsHashBuf InvertedIndexHash) error {
 	log.Debugf("start storage...%v,len:%d", PostingsHashBuf, len(PostingsHashBuf))
 
 	for token, invertedIndex := range PostingsHashBuf {
-		log.Debugf("token:%s,invertedIndex:%v\n", token, invertedIndex)
+		log.Debugf("token:%s,invertedIndex:%v", token, invertedIndex)
 		err := e.storagePostings(invertedIndex)
 		if err != nil {
 			log.Errorf("updatePostings err: %v", err)

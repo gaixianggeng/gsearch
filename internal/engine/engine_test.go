@@ -6,6 +6,7 @@ import (
 	"gsearch/conf"
 	"gsearch/internal/meta"
 	"gsearch/internal/segment"
+	"gsearch/internal/storage"
 	"gsearch/pkg/utils/jstool"
 	"testing"
 )
@@ -23,7 +24,7 @@ func TestEngine_Text2PostingsLists(t *testing.T) {
 		{
 			name: "test1",
 			args: args{
-				text:  "北京的冬天，北京的夏天，北京的秋天，北京的春天春天",
+				text:  "北京的冬天，北京的夏天，北京的秋天，北京的春天",
 				docID: 123,
 			},
 			wantErr: false,
@@ -31,8 +32,40 @@ func TestEngine_Text2PostingsLists(t *testing.T) {
 		{
 			name: "test2",
 			args: args{
-				text:  "北京的冬天，北京的夏天，北京的秋天，北京的春天",
+				text:  "北京的冬天",
 				docID: 12,
+			},
+			wantErr: false,
+		},
+		{
+			name: "test3",
+			args: args{
+				text:  "北京的春天",
+				docID: 123,
+			},
+			wantErr: false,
+		},
+		{
+			name: "test4",
+			args: args{
+				text:  "北京的夏天",
+				docID: 1234,
+			},
+			wantErr: false,
+		},
+		{
+			name: "test5",
+			args: args{
+				text:  "北京的秋天",
+				docID: 12345,
+			},
+			wantErr: false,
+		},
+		{
+			name: "test6",
+			args: args{
+				text:  "北京的夜晚",
+				docID: 12345789,
 			},
 			wantErr: false,
 		},
@@ -40,13 +73,20 @@ func TestEngine_Text2PostingsLists(t *testing.T) {
 	e := newEng()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			e.AddDoc(
+				&storage.Document{
+					DocID: tt.args.docID,
+					Title: tt.args.text,
+					Body:  tt.args.text + "的天气",
+				},
+			)
 			if err := e.Text2PostingsLists(tt.args.text, tt.args.docID); (err != nil) != tt.wantErr {
 				t.Errorf("Engine.Text2PostingsLists() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			// t.Log("buf:", jstool.StructToStr(e.PostingsHashBuf))
 		})
 	}
-	// 打印出 next 链路
+	// 打印出 next 链路 ，如果已经落盘，打印出来的是空
 	invert := e.PostingsHashBuf["北京"]
 	t.Logf("posting list:%s", jstool.StructToStr(invert.PostingsList))
 }
