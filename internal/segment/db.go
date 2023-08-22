@@ -9,7 +9,7 @@ import (
 	"gsearch/pkg/utils/log"
 )
 
-// CreateNewInvertedIndex 创建倒排索引
+// CreateNewInvertedIndex 创建新的倒排索引
 func CreateNewInvertedIndex(token string, docCount uint64) *InvertedIndexValue {
 	p := new(InvertedIndexValue)
 	p.DocCount = docCount

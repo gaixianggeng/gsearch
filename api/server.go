@@ -3,9 +3,9 @@ package api
 import (
 	"gsearch/conf"
 	"gsearch/internal/meta"
+	"gsearch/pkg/utils/log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog/log"
 )
 
 // Start 启动服务

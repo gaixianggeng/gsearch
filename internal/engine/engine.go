@@ -65,7 +65,7 @@ func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
 		e.Flush()
 	}
 
-	e.indexCount()
+	e.indexToCount()
 	return nil
 }
 
@@ -118,8 +118,8 @@ func (e *Engine) UpdateCount(num uint64) error {
 	return seg.UpdateForwardCount(count)
 }
 
-// indexCount index计数
-func (e *Engine) indexCount() {
+// indexToCount index计数
+func (e *Engine) indexToCount() {
 	e.meta.Lock()
 	e.meta.IndexCount++
 	e.meta.Unlock()
