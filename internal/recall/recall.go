@@ -177,7 +177,7 @@ func (r *Recall) searchPhrase(queryToken []*queryTokenHash, tokenCursors []searc
 	// 获取遍历查询query分词之后的词元总数 也就是被分成了多少个term
 	positionsSum := uint64(0)
 	for _, t := range queryToken {
-		positionsSum += t.invertedIndex.PositionCount
+		positionsSum += t.invertedIndex.DocPositionCount
 	}
 	cursors := make([]phraseCursor, positionsSum)
 	phraseCount := int64(0)

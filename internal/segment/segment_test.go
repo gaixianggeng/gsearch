@@ -85,7 +85,7 @@ func TestIndex_token2PostingsLists(t *testing.T) {
 			if err := Token2PostingsLists(tt.args.bufInvertHash, tt.args.token, tt.args.position, tt.args.docID); (err != nil) != tt.wantErr {
 				t.Errorf("Index.token2PostingsLists() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			count := tt.args.bufInvertHash[tt.args.token].PositionCount
+			count := tt.args.bufInvertHash[tt.args.token].DocPositionCount
 			docCount := tt.args.bufInvertHash[tt.args.token].DocCount
 			s, _ := json.Marshal(tt.args.bufInvertHash)
 			t.Logf("bufInvertHash:%v", string(s))

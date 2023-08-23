@@ -28,6 +28,7 @@ func Token2PostingsLists(bufInvertHash InvertedIndexHash, token string,
 	}
 
 	pl := new(PostingsList)
+	// 同一篇 doc 中对相同的token，除了 position 不同，其他都相同,所以判断不为空的话，只计数
 	if bufInvert != nil && bufInvert.PostingsList != nil {
 		pl = bufInvert.PostingsList
 		// 这里的positionCount和下面bufInvert的positionCount是不一样的
@@ -57,8 +58,7 @@ func Token2PostingsLists(bufInvertHash InvertedIndexHash, token string,
 	// 存储位置信息
 	pl.Positions = append(pl.Positions, position)
 	// 统计该token关联的所有doc的position的个数
-	bufInvert.PositionCount++
-
+	bufInvert.DocPositionCount++
 	return nil
 }
 
@@ -93,14 +93,14 @@ func (e *Segment) FetchPostings(token string) (*PostingsList, uint64, error) {
 }
 
 // Flush 落盘操作
-func (e *Segment) Flush(PostingsHashBuf InvertedIndexHash) error {
-	if len(PostingsHashBuf) == 0 {
+func (e *Segment) Flush(hashBuf InvertedIndexHash) error {
+	if len(hashBuf) == 0 {
 		log.Warnf("Flush err: %v", "in.PostingsHashBuf is empty")
 		return nil
 	}
-	log.Debugf("start storage...%v,len:%d", PostingsHashBuf, len(PostingsHashBuf))
+	log.Debugf("start storage...%v,len:%d", hashBuf, len(hashBuf))
 
-	for token, invertedIndex := range PostingsHashBuf {
+	for token, invertedIndex := range hashBuf {
 		log.Debugf("token:%s,invertedIndex:%v", token, invertedIndex)
 		err := e.storagePostings(invertedIndex)
 		if err != nil {

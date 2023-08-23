@@ -65,27 +65,24 @@ func (m *MergeScheduler) Close() {
 }
 
 // MayMerge 判断是否需要merge
-// 通过meta数据中的seginfo来计算
+// 通过meta数据中的seg info来计算
 func (m *MergeScheduler) MayMerge() {
 	// 已存在超过2个segment，则需要判断seg是否需要merge
 	if len(m.Meta.SegMeta.SegInfo) <= 1 {
 		log.Infof("seg count: %v, no need merge", len(m.Meta.SegMeta.SegInfo))
 		return
 	}
-
-	mess, isNeed := m.calculateSegs()
+	mess, isNeed := m.calculateSegSize()
 	if !isNeed {
 		return
 	}
-
 	m.Add(1)
 	m.Message <- mess
-
-	log.Infof("merge segs: %v", mess)
+	log.Infof("merge seg info: %v", mess)
 }
 
 // 计算是否有段需要合并
-func (m *MergeScheduler) calculateSegs() (*MergeMessage, bool) {
+func (m *MergeScheduler) calculateSegSize() (*MergeMessage, bool) {
 	segs := m.Meta.SegMeta.SegInfo
 	log.Debugf("segs: %v", segs)
 
@@ -94,26 +91,21 @@ func (m *MergeScheduler) calculateSegs() (*MergeMessage, bool) {
 	if !ok0 || !ok2 {
 		return nil, false
 	}
-	// 判断是否需要合并
-
-	segList := make([]*segment.SegInfo, 0)
+	// TODO:判断是否需要合并 算法实现，当前只是简单取了两个
+	segList := make(MergeMessage, 0)
 	segList = append(segList, segs[0])
 	segList = append(segList, segs[1])
-
-	mes := MergeMessage(segList)
-	return &mes, true
+	return &segList, true
 }
 
 // Merge 合并segment
 func (m *MergeScheduler) merge(segs *MergeMessage) error {
 	defer m.Done()
-
 	log.Debugf("merge segs: %v", segs)
-
-	// 恢复seg is_merging状态
+	// TODO:恢复seg is_merging状态
 	defer func() {
 		for _, seg := range ([]*segment.SegInfo)(*segs) {
-			// 如果merge失败，没有删除旧seg，需要恢复
+			// TODO:如果merge失败，没有删除旧seg，需要恢复
 			if s, ok := m.Meta.SegMeta.SegInfo[seg.SegID]; ok {
 				s.IsMerging = false
 			}

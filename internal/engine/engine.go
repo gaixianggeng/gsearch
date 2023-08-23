@@ -38,16 +38,15 @@ func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
 		return fmt.Errorf("text2PostingsLists Ngram err: %v", err)
 	}
 
+	// 对同一个 doc 中的 token 生成倒排索引，存入缓冲区
 	bufInvertedHash := make(segment.InvertedIndexHash)
-
 	for _, token := range tokens {
 		err := segment.Token2PostingsLists(bufInvertedHash, token.Token, token.Position, docID)
 		if err != nil {
 			return fmt.Errorf("text2PostingsLists token2PostingsLists err: %v", err)
 		}
 	}
-	log.Debugf("bufInvertedHash:%v", bufInvertedHash)
-
+	// 对不同 doc 中相同的 token 进行合并
 	if e.PostingsHashBuf != nil && len(e.PostingsHashBuf) > 0 {
 		// 合并命中相同的token的不同doc
 		segment.MergeInvertedIndex(e.PostingsHashBuf, bufInvertedHash)
@@ -69,9 +68,10 @@ func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
 	return nil
 }
 
-// Flush --
+// Flush isEnd 用来标识文件是否读取结束
 func (e *Engine) Flush(isEnd ...bool) error {
 
+	// 对当前 segment 的倒排索引缓冲区进行落盘
 	e.Seg[e.CurrSegID].Flush(e.PostingsHashBuf)
 
 	// update meta info
@@ -85,16 +85,17 @@ func (e *Engine) Flush(isEnd ...bool) error {
 	e.Seg[e.CurrSegID].Close()
 	delete(e.Seg, e.CurrSegID)
 
+	// 如果当前 segment 的数量大于1，需要计算是否需要进行合并
+	// 相当于每次 flush 操作之后，都会去计算一下当前现有的 segment 是否需要进行合并
 	if len(e.meta.SegMeta.SegInfo) > 1 {
 		e.Scheduler.MayMerge()
 	}
-
-	// new
+	// 如果已经结束索引流程，就不需要创建新的 segment 了
 	if len(isEnd) > 0 && isEnd[0] {
 		return nil
 	}
+	// 还没结束索引流程的话，就继续创建新的 segment
 	segID, seg := segment.NewSegments(e.meta.SegMeta, e.conf, segment.IndexMode)
-
 	e.BufCount = 0
 	e.PostingsHashBuf = make(segment.InvertedIndexHash)
 	e.CurrSegID = segID

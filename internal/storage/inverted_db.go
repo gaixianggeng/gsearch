@@ -28,7 +28,7 @@ type TermValue struct {
 	Size     uint64 // term value的大小
 }
 
-// StoragePostings 倒排列表存储到数据库中
+// StoragePostings 倒排列表存储到数据库中，分两块 1.存储到文件中 2.存储到b+tree中
 func (t *InvertedDB) StoragePostings(token string, values []byte, docCount uint64) error {
 	// 写入file，获取写入的size
 	size, err := t.storagePostings(values)

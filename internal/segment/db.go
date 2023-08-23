@@ -14,7 +14,7 @@ func CreateNewInvertedIndex(token string, docCount uint64) *InvertedIndexValue {
 	p := new(InvertedIndexValue)
 	p.DocCount = docCount
 	p.Token = token
-	p.PositionCount = 0
+	p.DocPositionCount = 0
 	p.PostingsList = new(PostingsList)
 	return p
 }
