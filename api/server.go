@@ -11,17 +11,16 @@ import (
 // Start 启动服务
 func Start(meta *meta.Profile, conf *conf.Config) {
 	log.Info("start")
-
-	recall := NewRecall(meta, conf)
+	recallAPI := NewRecall(meta, conf)
+	adminAPI := NewAdmin(meta, conf)
 
 	r := gin.Default()
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
-
-	r.GET("/search", recall.Search)
+	r.GET("/search", recallAPI.Search)
+	// admin 相关的接口
+	admin := r.Group("/admin")
+	{
+		admin.GET("/summary", adminAPI.Summary)
+	}
 
 	r.Run(":5168")
 }

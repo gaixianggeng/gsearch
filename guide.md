@@ -28,13 +28,24 @@ TermValue 存储的doc_count、offset、size
     2. 将每个 token转为倒排列表
     3. 合并token 相同，doc 不同的数据
     4. 落盘 flush 操作
+        1. 更新meta 的信息
     5. index 计数
 
 > segment 层
 > 
 1. Token2PostingsLists
     1. 初始化 token 维度的倒排索引
-    2. CreateNewInvertedIndex
-    3. CreateNewPostingsList
-2. MergeInvertedIndex
-3. Flush
+    2. CreateNewInvertedIndex 创建新的倒排索引
+    3. CreateNewPostingsList 创建新的倒排列表，赋值给b 中新建的索引
+2. MergeInvertedIndex 合并两个 map[string]*InvertedIndexValue类型的倒排索引
+3. 是否达到阈值，达到的话 Flush
+4. storagePostings 存储InvertedIndexValue
+    1. 先编码 存储的编码结构 ？？ 待确定
+    2. 再写入InvertedDB.StoragePostings ？？inverted_db 层
+5. indexToCount 对索引的 doc 计数
+
+> merge 流程
+> 
+- index 索引流程启动的时候会启动 channel 来接收带 merge 的segment
+- 每次 flush 的时候会计算是否需要 merge
+- 当前merge 的算法实现还没弄
