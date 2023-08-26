@@ -12,14 +12,16 @@ import (
 func Start(meta *meta.Profile, conf *conf.Config) {
 	log.Info("start")
 	recallAPI := NewRecall(meta, conf)
-	adminAPI := NewAdmin(meta, conf)
+	debugAPI := NewDebug(meta, conf)
 
 	r := gin.Default()
 	r.GET("/search", recallAPI.Search)
 	// admin 相关的接口
-	admin := r.Group("/admin")
+	admin := r.Group("/debug")
 	{
-		admin.GET("/summary", adminAPI.Summary)
+		admin.GET("/list", debugAPI.List)
+		admin.GET("/doc/:docID", debugAPI.Doc)
+		admin.GET("/doc/:term", debugAPI.Term)
 	}
 
 	r.Run(":5168")
