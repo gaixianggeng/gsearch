@@ -45,6 +45,7 @@ func (in *Index) addDoc(doc *storage.Document) error {
 	if doc == nil || doc.DocID <= 0 || doc.Title == "" {
 		return fmt.Errorf("doc err: %v", "doc || doc_id || title is empty")
 	}
+	// 添加正排
 	err := in.engine.AddDoc(doc)
 	if err != nil {
 		return fmt.Errorf("forward doc add err: %v", err)

@@ -33,6 +33,7 @@ func (e *Engine) AddDoc(doc *storage.Document) error {
 
 // Text2PostingsLists 文本转倒排索引
 func (e *Engine) Text2PostingsLists(text string, docID uint64) error {
+	// 分词
 	tokens, err := query.NGram(text, e.N)
 	if err != nil {
 		return fmt.Errorf("text2PostingsLists Ngram err: %v", err)

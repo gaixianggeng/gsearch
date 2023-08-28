@@ -21,7 +21,7 @@ func Start(meta *meta.Profile, conf *conf.Config) {
 	{
 		admin.GET("/list", debugAPI.List)
 		admin.GET("/doc/:docID", debugAPI.Doc)
-		admin.GET("/doc/:term", debugAPI.Term)
+		admin.GET("/index/:term", debugAPI.Term)
 	}
 
 	r.Run(":5168")
