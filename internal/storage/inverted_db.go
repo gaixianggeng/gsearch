@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"gsearch/pkg/log"
 	"gsearch/pkg/utils"
-	"gsearch/pkg/utils/log"
 	"os"
 
 	"github.com/boltdb/bolt"

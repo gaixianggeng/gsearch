@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"gsearch/pkg/utils/log"
+	"gsearch/pkg/log"
 	"testing"
 )
 

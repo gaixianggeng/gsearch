@@ -1,49 +1,21 @@
 package segment
 
-import (
-	"fmt"
-	"sync"
-)
+// Meta represents the metadata for a segment
+type Meta struct{}
 
-// SegMeta 元数据
-type SegMeta struct {
-	NextSeg  SegID              `json:"next_seg"`  // 下一个segmentid,永远表示下一个新建的segment,seginfos中不存在
-	SegCount uint64             `json:"seg_count"` // 当前segment的数量
-	SegInfo  map[SegID]*SegInfo `json:"seg_info"`  // 当前segments的信息
-	sync.Mutex
+// NewMeta creates a new Meta instance
+func NewMeta() *Meta {
+	return &Meta{}
 }
 
-// newSegment 创建新的segment 只创建，更新nextseg，不更新currseg
-func newSegmentInfo(segID SegID) *SegInfo {
-	seg := &SegInfo{
-		SegID:   segID,
-		SegSize: 0,
-	}
-	return seg
-}
-
-// UpdateSegMeta 更新段信息
-func (m *SegMeta) UpdateSegMeta(segID SegID, indexCount uint64) error {
-	m.Lock()
-	defer m.Unlock()
-
-	if _, ok := m.SegInfo[segID]; !ok {
-		return fmt.Errorf("seg:%d is not exist", segID)
-	}
-	m.SegInfo[segID].SegSize = indexCount
+// Save saves the meta data to a file
+func (m *Meta) Save(filename string) error {
+	// TODO: Implement the logic to save meta data
 	return nil
 }
 
-// NewSegmentItem 创建新的segment 只创建，更新nextseg，不更新currseg
-func (m *SegMeta) NewSegmentItem() error {
-	m.Lock()
-	defer m.Unlock()
-	seg := newSegmentInfo(m.NextSeg)
-	if _, ok := m.SegInfo[SegID(seg.SegID)]; ok {
-		return fmt.Errorf("seg:%d is exist", seg.SegID)
-	}
-	m.SegInfo[SegID(seg.SegID)] = seg
-	m.SegCount++
-	m.NextSeg++
+// Load loads the meta data from a file
+func (m *Meta) Load(filename string) error {
+	// TODO: Implement the logic to load meta data
 	return nil
 }

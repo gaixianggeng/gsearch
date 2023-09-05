@@ -1,8 +1,8 @@
-package query
+package analyzer
 
 import (
 	"errors"
-	"gsearch/pkg/utils/log"
+	"gsearch/pkg/log"
 	"strings"
 )
 

@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gsearch/internal/storage"
-	"gsearch/pkg/utils/log"
+	"gsearch/pkg/log"
 	"os"
 	"sort"
 	"testing"

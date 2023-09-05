@@ -2,14 +2,14 @@ package api
 
 import (
 	"gsearch/conf"
-	"gsearch/internal/meta"
-	"gsearch/pkg/utils/log"
+	"gsearch/internal/segment"
+	"gsearch/pkg/log"
 
 	"github.com/gin-gonic/gin"
 )
 
 // Start 启动服务
-func Start(meta *meta.Profile, conf *conf.Config) {
+func Start(meta *segment.Meta, conf *conf.Config) {
 	log.Info("start")
 	recallAPI := NewRecall(meta, conf)
 	debugAPI := NewDebug(meta, conf)

@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"gsearch/api"
 	"gsearch/conf"
-	"gsearch/internal/index"
-	"gsearch/internal/meta"
-	"gsearch/pkg/utils/log"
-	"time"
+	"gsearch/internal/segment"
+	"gsearch/pkg/log"
 )
 
 var (
@@ -43,7 +41,9 @@ func run() {
 	}
 	t, _ := json.Marshal(c)
 	fmt.Printf("conf:%s\n", t)
-	meta, err := meta.ParseProfile(c)
+	meta := segment.NewMeta()
+	// TODO: 从文件加载元数据
+	meta.Load("")
 	if err != nil {
 		panic(err)
 	}
@@ -51,13 +51,13 @@ func run() {
 		panic("meta is nil")
 	}
 
-	// 定时同步meta数据
-	ticker := time.NewTicker(time.Second * 1)
-	go meta.SyncByTicker(ticker)
+	// TODO:定时同步meta数据
+	// ticker := time.NewTicker(time.Second * 1)
+	// go meta.SyncByTicker(ticker)
 
-	if c.Version != meta.Version {
-		panic(fmt.Sprintf("version not match, %s != %s", c.Version, meta.Version))
-	}
+	// if c.Version != meta.Version {
+	// 	panic(fmt.Sprintf("version not match, %s != %s", c.Version, meta.Version))
+	// }
 
 	start(c, meta)
 
@@ -65,20 +65,21 @@ func run() {
 	func() {
 		// 最后同步元数据至文件
 		log.Info("close")
-		meta.SyncMeta()
+		// meta.SyncMeta()
 		log.Info("close")
-		ticker.Stop()
+		// ticker.Stop()
 		log.Info("close")
 	}()
 }
 
-func start(c *conf.Config, profile *meta.Profile) {
+func start(c *conf.Config, meta *segment.Meta) {
 	if action == START_SERVER {
 		log.Debugf("start server...")
-		api.Start(profile, c)
+		api.Start(meta, c)
 	} else if action == START_INDEX {
 		log.Debugf("start")
-		index.Run(profile, c)
+		//TODO: 启动索引服务
+		// index.Run(meta, c)
 		log.Debug("end")
 	}
 }

@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"gsearch/pkg/utils/log"
+	"gsearch/pkg/log"
 	"os"
 	"syscall"
 )

@@ -2,8 +2,8 @@ package api
 
 import (
 	"gsearch/conf"
-	"gsearch/internal/meta"
-	"gsearch/pkg/utils/log"
+	"gsearch/internal/segment"
+	"gsearch/pkg/log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -40,6 +40,6 @@ func (a *DebugController) Term(c *gin.Context) {
 	})
 }
 
-func NewDebug(profile *meta.Profile, c *conf.Config) *DebugController {
+func NewDebug(meta *segment.Meta, c *conf.Config) *DebugController {
 	return &DebugController{}
 }

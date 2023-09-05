@@ -2,8 +2,8 @@ package api
 
 import (
 	"gsearch/conf"
-	"gsearch/internal/meta"
-	"gsearch/internal/recall"
+	"gsearch/internal/engine"
+	"gsearch/internal/segment"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +11,7 @@ import (
 
 // RecallController 召回
 type RecallController struct {
-	engine *recall.Recall
+	engine *engine.Engine
 }
 
 // Search 搜索入口
@@ -39,7 +39,7 @@ func (r *RecallController) Search(c *gin.Context) {
 }
 
 // NewRecall 创建召回服务
-func NewRecall(profile *meta.Profile, c *conf.Config) *RecallController {
-	r := recall.NewRecall(profile, c)
+func NewRecall(meta *segment.Meta, c *conf.Config) *RecallController {
+	r := engine.New()
 	return &RecallController{r}
 }
